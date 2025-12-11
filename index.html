@@ -181,6 +181,21 @@
   justify-content: flex-end;
   gap: 8px;
 }
+/* ===== FIX ESPECIAL PARA CELULARES PEQUEÑOS ===== */
+@media (max-width: 480px) {
+  #trelloModal .modal-box {
+    width: 85%;
+    max-width: 310px;   /* Antes 420px */
+    margin-top: 20px;   /* Más cerca del top */
+    padding: 10px;      /* Más compacto */
+  }
+
+  #trelloModal textarea {
+    height: 160px;      /* Antes 220px */
+    font-size: 14px;    /* Más legible en pantallas chicas */
+  }
+}
+
 
 
 </style>
@@ -721,4 +736,3 @@ downloadJSON.addEventListener("click", () => {
 </script>
 </body>
 </html>
-
