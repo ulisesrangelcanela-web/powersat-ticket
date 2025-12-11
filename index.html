@@ -139,6 +139,49 @@
   }
 }
 
+/* ===== Modal Responsive Fix ===== */
+#trelloModal {
+  display:none;
+  position:fixed;
+  top:0; left:0;
+  width:100%; height:100%;
+  background:rgba(0,0,0,0.5);
+  backdrop-filter:blur(4px);
+  z-index:9999;
+  overflow:auto;
+  padding:20px;
+}
+
+#trelloModal .modal-box {
+  background:white;
+  width:90%;
+  max-width:420px;
+  margin:auto;
+  margin-top:40px;
+  padding:15px;
+  border-radius:8px;
+  box-shadow:0 4px 12px rgba(0,0,0,0.35);
+
+  /* Para que el contenido nunca se esconda */
+  max-height:90vh;
+  overflow-y:auto;
+}
+
+#trelloModal textarea {
+  width:100%;
+  height:220px;
+  font-size:15px;
+  padding:8px;
+  text-transform:uppercase;
+}
+
+.modal-buttons {
+  margin-top: 10px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 
 </style>
 </head>
@@ -265,35 +308,18 @@
   </div>
 </div>
 <!-- Modal OILFIELD -->
-<div id="trelloModal" style="
-  display:none;
-  position:fixed;
-  top:0; left:0;
-  width:100%; height:100%;
-  background:rgba(0,0,0,0.5);
-  backdrop-filter:blur(4px);
-">
-  <div style="
-    background:white;
-    width:420px;
-    margin:60px auto;
-    padding:15px;
-    border-radius:8px;
-    box-shadow:0 4px 12px rgba(0,0,0,0.35);
-  ">
-    <h3 style="margin:5px 0 10px 0; text-transform:uppercase;">OPERATIONS NOTE</h3>
+<div id="trelloModal">
+  <div class="modal-box">
 
-    <textarea id="trelloText" style="
-      width:100%;
-      height:220px;
-      font-size:15px;
-      padding:8px;
-      text-transform:uppercase;
-    "></textarea>
+      <h3 style="margin:5px 0 10px 0; text-transform:uppercase;">OPERATIONS NOTE</h3>
 
-    <div style="margin-top:10px; display:flex; justify-content:flex-end; gap:8px;">
+    <textarea id="trelloText"></textarea>
+
+
+    <div class="modal-buttons">
       <button id="copyTrello" class="btn" style="background:#0a8;">COPY</button>
       <button id="closeModal" class="btn" style="background:#777;">CLOSE</button>
+
     </div>
   </div>
 </div>
@@ -695,3 +721,4 @@ downloadJSON.addEventListener("click", () => {
 </script>
 </body>
 </html>
+
