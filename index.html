@@ -74,15 +74,15 @@
   }
 
   #folioOverlay{ right:45px; top:60px; font-weight:700; font-size:16px; }
-  #stateCodeOverlay{ right:97px; top:58px; font-size:16px; font-weight:600; }
+  #stateCodeOverlay{ right:97px; top:60px; font-size:16px; font-weight:600; }
 
   #customerNameOverlay{ top:120px; left:17%; transform:translateX(-50%); text-align:center; }
   #rigNameOverlay{ top:120px; left:50%; transform:translateX(-50%); text-align:center; }
-  #wellNameOverlay{ top:160px; left:50%; transform:translateX(-50%); text-align:center; }
-  #parishOverlay{ top:200px; left:50%; transform:translateX(-50%); text-align:center; }
+  #wellNameOverlay{ top:162px; left:50%; transform:translateX(-50%); text-align:center; }
+  #parishOverlay{ top:202px; left:50%; transform:translateX(-50%); text-align:center; }
 
   #dateOverlay{ top:120px; left:82%; transform:translateX(-50%); text-align:center; }
-  #techOverlay{ top:240px; left:83%; transform:translateX(-50%); text-align:center; }
+  #techOverlay{ top:243px; left:83%; transform:translateX(-50%); text-align:center; }
 
   #serviceTypeOverlay{
     left:40px; right:391px; top:585px;
@@ -102,10 +102,10 @@
 }
 
 
-  #wcOverlay{ left:40px; top:752px; }
-  #aOverlay{ left:40px; top:781px; }
-  #dOverlay{ left:40px; top:810px; }
-  #rtOverlay{ left:40px; top:831px; }
+  #wcOverlay{ left:35px; top:755px; }
+  #aOverlay{ left:35px; top:784px; }
+  #dOverlay{ left:35px; top:813px; }
+  #rtOverlay{ left:35px; top:832px; }
 
   @media(max-width:1100px){
     .ticket-canvas{ transform:scale(0.85); transform-origin:top left; }
@@ -272,6 +272,7 @@
     <div style="margin-top:10px;">
       <button id="fillBtn" class="btn">TRELLO / CALENDAR</button>
       <button id="generatePDF" class="btn" style="background:#0a8">GENERATE PDF</button>
+      <button id="sendEmail" class="btn" style="background:#0057ff;">SEND EMAIL</button>
       <button id="downloadJSON" class="btn" style="background:#777">EXPORT JSON</button>
     </div>
 
@@ -892,6 +893,28 @@ downloadJSON.addEventListener("click", () => {
 
   URL.revokeObjectURL(url);
 });
+
+document.getElementById("sendEmail").addEventListener("click", () => {
+
+  const state  = stateCodeInput.value.trim().toUpperCase();
+  const folio  = folioInput.value.trim();
+  const cust   = customerInput.value.trim().replace(/\s+/g," ");
+  const well   = wellInput.value.trim().replace(/\s+/g," ");
+  const srvOpt = serviceSelect.options[serviceSelect.selectedIndex];
+  const srv    = srvOpt ? (srvOpt.dataset.label || srvOpt.textContent) : "";
+  let desc     = descInput.value.trim().split(/\s+/).slice(0,3).join(" ");
+
+  let wcStatus = "NC";
+  if (wcInput.value.trim() !== "" && wcInput.value.trim().toUpperCase() !== "N/C") {
+      wcStatus = "WC";
+  }
+
+  const subject = `${state}-${folio} ${cust} ${well} ${srv} ${desc} ${wcStatus}`.toUpperCase();
+
+  window.location.href = `mailto:?subject=${encodeURIComponent(subject)}`;
+});
+
+
 </script>
 </body>
 </html>
