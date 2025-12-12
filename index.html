@@ -811,23 +811,24 @@ generatePDF.addEventListener("click", async () => {
   const folio  = folioInput.value.trim();
   const cust   = customerInput.value.trim().replace(/\s+/g," ");
   const well   = wellInput.value.trim().replace(/\s+/g," ");
-
-  const opt = serviceSelect.options[serviceSelect.selectedIndex];
-  const srvLabel = opt ? (opt.dataset.label || opt.textContent) : "";
-
-  // Comentarios COMPLETOS
-  const commentsFull = descInput.value.trim().replace(/\s+/g," ");
-
-  // Combinar SERVICE TYPE + COMMENTS completo
-  const serviceAndComments = `${srvLabel} ${commentsFull}`.trim();
+  const srv    = serviceSelect.value.trim().replace(/\s+/g," ");
+  let desc     = descInput.value.trim().split(/\s+/).slice(0,3).join(" ");
 
   let wcStatus = "NC";
-  const wcRaw = (wcInput.value || "").trim().toUpperCase();
-  if (wcRaw && wcRaw !== "N/C" && wcRaw !== "NC") {
-    wcStatus = "WC";
+  if (wcInput.value.trim() !== "" && wcInput.value.trim().toUpperCase() !== "N/C") {
+      wcStatus = "WC";
   }
 
-  const fileName = `${state}-${folio} ${cust} ${well} ${serviceAndComments} ${wcStatus}`.toUpperCase();
+  const fileName = `${state}-${folio} ${cust} ${well} ${srv} ${desc} ${wcStatus}`.toUpperCase();
+
+  //  Abrimos ventana ANTES de generar el PDF (solo iOS)
+  const pdfWindow = window.open("", "_blank");
+
+  // Si Safari bloqueó la ventana, avisamos
+  if (!pdfWindow) {
+    alert("Safari bloqueó la ventana emergente. Activa pop-ups.");
+    return;
+  }
 
   const area = document.getElementById("ticketCanvas");
   const canvas = await html2canvas(area, { scale:2, useCORS:true });
@@ -840,16 +841,19 @@ generatePDF.addEventListener("click", async () => {
   });
 
   pdf.addImage(img,"PNG",0,0,canvas.width,canvas.height);
+
+  //  Crear blob manualmente
   const blob = pdf.output("blob");
-const url = URL.createObjectURL(blob);
+  const url = URL.createObjectURL(blob);
 
-// Safari Mail respeta este nombre como attachment
-const pdfWindow = window.open(url, "_blank");
-
-// Esto agrega el nombre al preview (truco especial para iOS)
+  // Mostrar el PDF en ventana nueva
+pdfWindow.location.href = url;
 pdfWindow.document.title = `${fileName}.pdf`;
 
-});
+// Abrir Mail en una ventana aparte (NO reemplazar el PDF)
+window.location.href = `mailto:?subject=${encodeURIComponent(fileName)}`;
+
+
 
 /* JSON Export */
 downloadJSON.addEventListener("click", () => {
