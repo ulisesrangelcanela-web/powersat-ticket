@@ -803,73 +803,56 @@ document.getElementById("closeModal").addEventListener("click", () => {
   document.getElementById("trelloModal").style.display = "none";
 });
 
-/* ====== GENERAR PDF VIA CLOUDFLARE WORKER ====== */
+/* PDF */
 generatePDF.addEventListener("click", async () => {
 
-    syncOverlays();
+  syncOverlays();
 
-    // ====== Construcción del nombre ======
-    const state  = stateCodeInput.value.trim().toUpperCase();
-    const folio  = folioInput.value.trim();
-    const cust   = customerInput.value.trim().replace(/\s+/g," ");
-    const well   = wellInput.value.trim().replace(/\s+/g," ");
-    
-    const srvOpt = serviceSelect.options[serviceSelect.selectedIndex];
-    const srvLabel = srvOpt ? (srvOpt.dataset.label || srvOpt.textContent) : "";
+  const state  = stateCodeInput.value.trim().toUpperCase();
+  const folio  = folioInput.value.trim();
+  const cust   = customerInput.value.trim().replace(/\s+/g," ");
+  const well   = wellInput.value.trim().replace(/\s+/g," ");
+  const srv    = serviceSelect.value.trim().replace(/\s+/g," ");
+  let desc     = descInput.value.trim().split(/\s+/).slice(0,3).join(" ");
 
-    let desc = descInput.value.trim().split(/\s+/).slice(0,3).join(" ");
+  let wcStatus = "NC";
+  if (wcInput.value.trim() !== "" && wcInput.value.trim().toUpperCase() !== "N/C") {
+      wcStatus = "WC";
+  }
 
-    let wcStatus = "NC";
-    if (wcInput.value.trim() !== "" && wcInput.value.trim().toUpperCase() !== "N/C") {
-        wcStatus = "WC";
-    }
+  const fileName = `${state}-${folio} ${cust} ${well} ${srv} ${desc} ${wcStatus}`.toUpperCase();
 
-    const fileName = `${state}-${folio} ${cust} ${well} ${srvLabel} ${desc} ${wcStatus}`
-                        .toUpperCase()
-                        .replace(/\s+/g, "_");
+  //  Abrimos ventana ANTES de generar el PDF (solo iOS)
+  const pdfWindow = window.open("", "_blank");
 
-    // ====== Generar PNG del canvas ======
-    const area = document.getElementById("ticketCanvas");
-    const canvas = await html2canvas(area, { scale: 2, useCORS: true });
-    const imgData = canvas.toDataURL("image/png");
+  // Si Safari bloqueó la ventana, avisamos
+  if (!pdfWindow) {
+    alert("Safari bloqueó la ventana emergente. Activa pop-ups.");
+    return;
+  }
 
-    // Quitamos encabezado 'data:image/png;base64,'
-    const base64Clean = imgData.replace(/^data:image\/png;base64,/, "");
+  const area = document.getElementById("ticketCanvas");
+  const canvas = await html2canvas(area, { scale:2, useCORS:true });
+  const img = canvas.toDataURL("image/png");
 
-    // ====== Enviar al Worker ======
-    const workerURL = "https://powersat-pdf.ulisesrangelcanela.workers.dev";
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({
+    unit:"px",
+    format:[canvas.width, canvas.height]
+  });
 
-    const resp = await fetch(workerURL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            fileName: fileName,
-            imageBase64: base64Clean
-        })
-    });
+  pdf.addImage(img,"PNG",0,0,canvas.width,canvas.height);
 
-    if (!resp.ok) {
-        alert("Error generando el PDF en el servidor.");
-        return;
-    }
+  //  Crear blob manualmente
+  const blob = pdf.output("blob");
+  const url = URL.createObjectURL(blob);
 
-    // Recibimos el PDF como blob
-    const pdfBlob = await resp.blob();
-    const pdfURL = URL.createObjectURL(pdfBlob);
+// Mostrar el PDF en ventana nueva
+pdfWindow.location.href = url;
+pdfWindow.document.title = `${fileName}.pdf`;
 
-    // ====== Descargar en Android / abrir en iPhone ======
-    const a = document.createElement("a");
-    a.href = pdfURL;
-    a.download = `${fileName}.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
 
-    // Limpieza opcional
-    setTimeout(() => URL.revokeObjectURL(pdfURL), 5000);
-
-    alert("PDF generado correctamente.");
-});
+});   // ← AQUÍ SE CIERRA EL BLOQUE DEL PDF (faltaba)
 
 
 
