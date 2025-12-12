@@ -846,12 +846,17 @@ generatePDF.addEventListener("click", async () => {
   const blob = pdf.output("blob");
   const url = URL.createObjectURL(blob);
 
-  // Mostrar el PDF en ventana nueva
+// Mostrar el PDF en ventana nueva
 pdfWindow.location.href = url;
 pdfWindow.document.title = `${fileName}.pdf`;
 
 // Abrir Mail en una ventana aparte (NO reemplazar el PDF)
-window.location.href = `mailto:?subject=${encodeURIComponent(fileName)}`;
+setTimeout(() => {
+  window.location.href = `mailto:?subject=${encodeURIComponent(fileName)}`;
+}, 500);
+
+});   // ← AQUÍ SE CIERRA EL BLOQUE DEL PDF (faltaba)
+
 
 
 
