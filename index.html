@@ -840,7 +840,15 @@ generatePDF.addEventListener("click", async () => {
   });
 
   pdf.addImage(img,"PNG",0,0,canvas.width,canvas.height);
-  pdf.save(`${fileName}.pdf`);
+  const blob = pdf.output("blob");
+const url = URL.createObjectURL(blob);
+
+// Safari Mail respeta este nombre como attachment
+const pdfWindow = window.open(url, "_blank");
+
+// Esto agrega el nombre al preview (truco especial para iOS)
+pdfWindow.document.title = `${fileName}.pdf`;
+
 });
 
 /* JSON Export */
