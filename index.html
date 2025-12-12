@@ -272,7 +272,7 @@
     <div style="margin-top:10px;">
       <button id="fillBtn" class="btn">TRELLO / CALENDAR</button>
       <button id="generatePDF" class="btn" style="background:#0a8">GENERATE PDF</button>
-      <button id="sendEmail" class="btn" style="background:#0057ff;">SEND EMAIL</button>
+      <button id="copyTitle" class="btn" style="background:#0057ff;">COPY TITLE</button>
       <button id="downloadJSON" class="btn" style="background:#777">EXPORT JSON</button>
     </div>
 
@@ -851,10 +851,6 @@ generatePDF.addEventListener("click", async () => {
 pdfWindow.location.href = url;
 pdfWindow.document.title = `${fileName}.pdf`;
 
-// Abrir Mail en una ventana aparte (NO reemplazar el PDF)
-setTimeout(() => {
-  window.location.href = `mailto:?subject=${encodeURIComponent(fileName)}`;
-}, 500);
 
 });   // ← AQUÍ SE CIERRA EL BLOQUE DEL PDF (faltaba)
 
@@ -894,14 +890,17 @@ downloadJSON.addEventListener("click", () => {
   URL.revokeObjectURL(url);
 });
 
-document.getElementById("sendEmail").addEventListener("click", () => {
+/* COPY TITLE */
+document.getElementById("copyTitle").addEventListener("click", () => {
 
   const state  = stateCodeInput.value.trim().toUpperCase();
   const folio  = folioInput.value.trim();
   const cust   = customerInput.value.trim().replace(/\s+/g," ");
   const well   = wellInput.value.trim().replace(/\s+/g," ");
+
   const srvOpt = serviceSelect.options[serviceSelect.selectedIndex];
   const srv    = srvOpt ? (srvOpt.dataset.label || srvOpt.textContent) : "";
+
   let desc     = descInput.value.trim().split(/\s+/).slice(0,3).join(" ");
 
   let wcStatus = "NC";
@@ -909,10 +908,25 @@ document.getElementById("sendEmail").addEventListener("click", () => {
       wcStatus = "WC";
   }
 
-  const subject = `${state}-${folio} ${cust} ${well} ${srv} ${desc} ${wcStatus}`.toUpperCase();
+  const title = `${state}-${folio} ${cust} ${well} ${srv} ${desc} ${wcStatus}`.toUpperCase();
 
-  window.location.href = `mailto:?subject=${encodeURIComponent(subject)}`;
+  // Intento de copiar
+  navigator.clipboard.writeText(title)
+    .then(() => alert("TITLE COPIED:\n" + title))
+    .catch(() => {
+      // fallback para iPhone viejo o Safari
+      const temp = document.createElement("textarea");
+      temp.value = title;
+      document.body.appendChild(temp);
+      temp.select();
+      document.execCommand("copy");
+      document.body.removeChild(temp);
+      alert("TITLE COPIED:\n" + title);
+    });
+
 });
+
+
 
 
 </script>
