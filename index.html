@@ -22,17 +22,33 @@
   }
 
   .form{width:380px; max-height:86vh; overflow:auto;}
-  label{display:block; margin-top:10px; font-size:15px; color:var(--muted);}
-
-  input[type="text"], input[type="time"], input[type="date"], select, textarea{
-    width:100%;
-    padding:8px;
-    margin-top:6px;
-    border:1px solid #ddd;
-    border-radius:6px;
-    box-sizing:border-box;
-    text-transform:uppercase;
+  label{
+  display:block;
+  margin-top:8px;
+  font-size:12px;        /* ↓ más pequeño */
+  font-weight:600;       /* sigue legible */
+  letter-spacing:0.4px;  /* look más profesional */
+  color:#555;
   }
+
+
+  input[type="text"],
+  input[type="time"],
+  input[type="date"],
+  select,
+  textarea{
+  width:100%;
+  padding:9px 10px;
+  margin-top:4px;
+  border:1px solid #ddd;
+  border-radius:6px;
+  box-sizing:border-box;
+  text-transform:uppercase;
+
+  font-size:15px;   /* <--MÁS GRANDE */
+  font-weight:500;
+}
+
 
   .btn{
     display:inline-block;
@@ -82,7 +98,7 @@
   #parishOverlay{ top:202px; left:50%; transform:translateX(-50%); text-align:center; }
 
   #dateOverlay{ top:120px; left:82%; transform:translateX(-50%); text-align:center; }
-  #techOverlay{ top:243px; left:83%; transform:translateX(-50%); text-align:center; }
+  #techOverlay{ top:238px; left:83%; transform:translateX(-50%); text-align:center; }
 
   #serviceTypeOverlay{
     left:40px; right:391px; top:585px;
@@ -102,10 +118,10 @@
 }
 
 
-  #wcOverlay{ left:35px; top:755px; }
-  #aOverlay{ left:35px; top:784px; }
-  #dOverlay{ left:35px; top:813px; }
-  #rtOverlay{ left:35px; top:832px; }
+  #wcOverlay{ left:45px; top:755px; }
+  #aOverlay{ left:45px; top:783px; }
+  #dOverlay{ left:45px; top:810px; }
+  #rtOverlay{ left:45px; top:832px; }
 
   @media(max-width:1100px){
     .ticket-canvas{ transform:scale(0.85); transform-origin:top left; }
@@ -324,106 +340,79 @@
 /* Ruta por defecto */
 const DEFAULT_BG_PATH = "formatoOriginal.jpeg";
 
-/* Coordenadas aproximadas de HQ para cálculo de millas */
-const HQ_COORDS = {
-  hobbs: { lat: 32.7020, lon: -103.1390 },
-  quail: { lat: 31.9000, lon: -102.3000 }
-};
 
 const EARTH_RADIUS_MI = 3958.8;
 
 
+/* ==== DEFINICIÓN GENERAL DE SERVICIOS ==== */
+const SERVICES = [
 
-/* ==== DEFINICIÓN DE SERVICIOS (SUNBELT / GENERAL) ==== */
-const SERVICES_SUNBELT = [
   {
-    groupLabel: "SUNBELT — OFFICE TRAILER",
+    groupLabel: "--OFFICE TRAILER--",
     items: [
-      { code:"SUN_OFC_NEW_RIG_UP",  label:"NEW RIG UP - OFFICE TRAILER",  price:"400" },
-      { code:"SUN_OFC_RIG_UP",      label:"RIG UP - OFFICE TRAILER",      price:"400" },
-      { code:"SUN_OFC_RIG_OUT",     label:"RIG OUT - OFFICE TRAILER",     price:"350" },
-      { code:"SUN_OFC_RELEASE",     label:"RELEASE - OFFICE TRAILER",     price:"350" },
-      { code:"SUN_OFC_RIG_DOWN",    label:"RIG DOWN - OFFICE TRAILER",    price:"350" },
-      { code:"SUN_OFC_RIG_MOVE",    label:"RIG MOVE - OFFICE TRAILER",    price:"400" },
-      { code:"SUN_OFC_SERVICE_CALL",label:"SERVICE CALL - OFFICE TRAILER",price:"N/C" },
-      { code:"SUN_OFC_CHECK_NET",   label:"CHECK NET - OFFICE TRAILER",   price:"N/C" },
-      { code:"SUN_OFC_CHECK_DTV",   label:"CHECK DIRECTV - OFFICE TRAILER", price:"N/C" }
+      { code:"OFC_NEW_RIG_UP",   label:"NEW RIG UP - OFFICE TRAILER",   price:"400" },
+      { code:"OFC_RIG_UP",       label:"RIG UP - OFFICE TRAILER",       price:"400" },
+      { code:"OFC_RIG_OUT",      label:"RIG OUT - OFFICE TRAILER",      price:"350" },
+      { code:"OFC_RELEASE",      label:"RELEASE - OFFICE TRAILER",      price:"350" },
+      { code:"OFC_RIG_DOWN",     label:"RIG DOWN - OFFICE TRAILER",     price:"350" },
+      { code:"OFC_RIG_MOVE",     label:"RIG MOVE - OFFICE TRAILER",     price:"400" },
+      { code:"OFC_SERVICE_CALL", label:"SERVICE CALL - OFFICE TRAILER", price:"N/C" },
+      { code:"OFC_CHECK_NET",    label:"CHECK NET - OFFICE TRAILER",    price:"N/C" },
+      { code:"OFC_CHECK_DTV",    label:"CHECK DIRECTV - OFFICE TRAILER",price:"N/C" }
     ]
   },
+
   {
-    groupLabel: "SUNBELT — GENERATOR",
+    groupLabel: "--GENERATOR--",
     items: [
-      { code:"SUN_GEN_NEW_RIG_UP",  label:"NEW RIG UP - GENERATOR",  price:"400" },
-      { code:"SUN_GEN_RIG_UP",      label:"RIG UP - GENERATOR",      price:"400" },
-      { code:"SUN_GEN_RIG_OUT",     label:"RIG OUT - GENERATOR",     price:"350" },
-      { code:"SUN_GEN_RELEASE",     label:"RELEASE - GENERATOR",     price:"350" },
-      { code:"SUN_GEN_RIG_DOWN",    label:"RIG DOWN - GENERATOR",    price:"350" },
-      { code:"SUN_GEN_RIG_MOVE",    label:"RIG MOVE - GENERATOR",    price:"400" },
-      { code:"SUN_GEN_SERVICE_CALL",label:"SERVICE CALL - GENERATOR",price:"N/C" }
+      { code:"GEN_NEW_RIG_UP",   label:"NEW RIG UP - GENERATOR",   price:"400" },
+      { code:"GEN_RIG_UP",       label:"RIG UP - GENERATOR",       price:"400" },
+      { code:"GEN_RIG_OUT",      label:"RIG OUT - GENERATOR",      price:"350" },
+      { code:"GEN_RELEASE",      label:"RELEASE - GENERATOR",      price:"350" },
+      { code:"GEN_RIG_DOWN",     label:"RIG DOWN - GENERATOR",     price:"350" },
+      { code:"GEN_RIG_MOVE",     label:"RIG MOVE - GENERATOR",     price:"400" },
+      { code:"GEN_SERVICE_CALL", label:"SERVICE CALL - GENERATOR", price:"N/C" }
+    ]
+  },
+
+  {
+    groupLabel: "--TOWER--",
+    items: [
+      { code:"TWR_NEW_RIG_UP",   label:"NEW RIG UP - TOWER",        price:"650" },
+      { code:"TWR_RIG_UP",       label:"RIG UP - TOWER",            price:"650" },
+      { code:"TWR_RIG_OUT",      label:"RIG OUT - TOWER",           price:"450" },
+      { code:"TWR_RELEASE",      label:"RELEASE - TOWER",           price:"450" },
+      { code:"TWR_RIG_DOWN",     label:"RIG DOWN - TOWER",          price:"450" },
+      { code:"TWR_TILT",         label:"TILT DOWN & UP - TOWER",    price:"450" },
+      { code:"TWR_SERVICE_CALL", label:"SERVICE CALL - TOWER",      price:"N/C" },
+      { code:"TWR_CHECK_NET",    label:"CHECK NET - TOWER",         price:"N/C" },
+      { code:"TWR_SITE_CHECK",   label:"SITE CHECK - TOWER",        price:"N/C" }
+    ]
+  },
+
+  {
+    groupLabel: "--RIGS--",
+    items: [
+      { code:"RIG_NEW_RIG_UP",      label:"NEW RIG UP",              price:"450" },
+      { code:"RIG_RIG_UP",          label:"RIG UP",                  price:"400" },
+      { code:"RIG_RIG_DOWN",        label:"RIG DOWN",                price:"350" },
+      { code:"RIG_RIG_UP_AMOVE",    label:"RIG UP AFTER MOVE",       price:"400" },
+      { code:"RIG_RIG_DOWN_FMOVE",  label:"RIG DOWN FOR MOVE",       price:"350" },
+      { code:"RIG_RIG_OUT",         label:"RIG OUT",                 price:"350" },
+      { code:"RIG_RELEASE",         label:"RELEASE",                 price:"350" },
+      { code:"RIG_NEW_INTERCOM",    label:"NEW INTERCOM",            price:"400" },
+      { code:"RIG_NEW_MICRO",       label:"NEW MICRO CELL BOOSTER",  price:"400" },
+      { code:"RIG_NEW_SHACK",       label:"NEW SHACK BOOSTER",       price:"400" },
+      { code:"RIG_SERVICE_CALL",    label:"SERVICE CALL",            price:"N/C" },
+      { code:"RIG_CHECK_NET",       label:"CHECK NET",               price:"N/C" },
+      { code:"RIG_CHECK_SHACK",     label:"CHECK SHACK BOOSTER",     price:"N/C" },
+      { code:"RIG_SITE_CHECK",      label:"SITE CHECK",              price:"N/C" },
+      { code:"RIG_SPECIAL",         label:"SPECIAL SERVICES",        price:"500" }
     ]
   }
+
 ];
 
-const SERVICES_GENERAL = [
-  {
-    groupLabel: "GENERAL CUSTOMERS — OFFICE TRAILER",
-    items: [
-      { code:"GEN_OFC_NEW_RIG_UP",  label:"NEW RIG UP - OFFICE TRAILER",  price:"450" },
-      { code:"GEN_OFC_RIG_UP",      label:"RIG UP - OFFICE TRAILER",      price:"450" },
-      { code:"GEN_OFC_RIG_OUT",     label:"RIG OUT - OFFICE TRAILER",     price:"400" },
-      { code:"GEN_OFC_RELEASE",     label:"RELEASE - OFFICE TRAILER",     price:"400" },
-      { code:"GEN_OFC_RIG_DOWN",    label:"RIG DOWN - OFFICE TRAILER",    price:"400" },
-      { code:"GEN_OFC_RIG_MOVE",    label:"RIG MOVE - OFFICE TRAILER",    price:"450" },
-      { code:"GEN_OFC_SERVICE_CALL",label:"SERVICE CALL - OFFICE TRAILER",price:"N/C" },
-      { code:"GEN_OFC_CHECK_NET",   label:"CHECK NET - OFFICE TRAILER",   price:"N/C" },
-      { code:"GEN_OFC_CHECK_DTV",   label:"CHECK DIRECTV - OFFICE TRAILER", price:"N/C" }
-    ]
-  },
-  {
-    groupLabel: "GENERAL CUSTOMERS — GENERATOR",
-    items: [
-      { code:"GEN_GEN_NEW_RIG_UP",  label:"NEW RIG UP - GENERATOR",  price:"450" },
-      { code:"GEN_GEN_RIG_UP",      label:"RIG UP - GENERATOR",      price:"450" },
-      { code:"GEN_GEN_RIG_OUT",     label:"RIG OUT - GENERATOR",     price:"400" },
-      { code:"GEN_GEN_RELEASE",     label:"RELEASE - GENERATOR",     price:"400" },
-      { code:"GEN_GEN_RIG_DOWN",    label:"RIG DOWN - GENERATOR",    price:"400" },
-      { code:"GEN_GEN_RIG_MOVE",    label:"RIG MOVE - GENERATOR",    price:"450" },
-      { code:"GEN_GEN_SERVICE_CALL",label:"SERVICE CALL - GENERATOR",price:"N/C" }
-    ]
-  },
-  {
-    groupLabel: "GENERAL CUSTOMERS — TOWER",
-    items: [
-      { code:"GEN_TWR_NEW_RIG_UP",  label:"NEW RIG UP - TOWER",      price:"650" },
-      { code:"GEN_TWR_RIG_UP",      label:"RIG UP - TOWER",          price:"650" },
-      { code:"GEN_TWR_RIG_OUT",     label:"RIG OUT - TOWER",         price:"450" },
-      { code:"GEN_TWR_RELEASE",     label:"RELEASE - TOWER",         price:"450" },
-      { code:"GEN_TWR_RIG_DOWN",    label:"RIG DOWN - TOWER",        price:"450" },
-      { code:"GEN_TWR_TILT",        label:"TILT DOWN & UP - TOWER",  price:"450" },
-      { code:"GEN_TWR_SERVICE_CALL",label:"SERVICE CALL - TOWER",    price:"N/C" },
-      { code:"GEN_TWR_CHECK_NET",   label:"CHECK NET - TOWER",       price:"N/C" }
-    ]
-  },
-  {
-    groupLabel: "GENERAL CUSTOMERS — RIGS",
-    items: [
-      { code:"GEN_RIG_NEW_RIG_UP",      label:"NEW RIG UP - RIGS",           price:"450" },
-      { code:"GEN_RIG_RIG_UP",          label:"RIG UP - RIGS",               price:"400" },
-      { code:"GEN_RIG_RIG_DOWN",        label:"RIG DOWN - RIGS",             price:"350" },
-      { code:"GEN_RIG_RIG_UP_AMOVE",    label:"RIG UP AFTER MOVE - RIGS",    price:"400" },
-      { code:"GEN_RIG_RIG_DOWN_FMOVE",  label:"RIG DOWN FOR MOVE - RIGS",    price:"350" },
-      { code:"GEN_RIG_RIG_OUT",         label:"RIG OUT - RIGS",              price:"350" },
-      { code:"GEN_RIG_RELEASE",         label:"RELEASE - RIGS",              price:"350" },
-      { code:"GEN_RIG_NEW_INTERCOM",    label:"NEW INTERCOM - RIGS",         price:"400" },
-      { code:"GEN_RIG_NEW_MICRO",       label:"NEW MICRO CELL BOOSTER - RIGS", price:"400" },
-      { code:"GEN_RIG_NEW_SHACK",       label:"NEW SHACK BOOSTER - RIGS",    price:"400" },
-      { code:"GEN_RIG_SERVICE_CALL",    label:"SERVICE CALL - RIGS",         price:"N/C" },
-      { code:"GEN_RIG_CHECK_NET",       label:"CHECK NET - RIGS",            price:"N/C" },
-      { code:"GEN_RIG_CHECK_SHACK",     label:"CHECK SHACK BOOSTER - RIGS",  price:"N/C" },
-      { code:"GEN_RIG_SPECIAL",         label:"SPECIAL SERVICES - RIGS",     price:"500" }
-    ]
-  }
-];
 
 /* Bind DOM */
 const folioInput      = document.getElementById('folioInput');
@@ -470,24 +459,21 @@ const dOverlay            = document.getElementById('dOverlay');
 const rtOverlay           = document.getElementById('rtOverlay');
 const stampOverlay        = document.getElementById('companyStampOverlay');
 
-/* ==== HELPERS ==== */
-function isSunbeltCustomer() {
-  const name = (customerInput.value || "").toUpperCase();
-  return name.includes("SUNBELT");
-}
 
-/* Construir opciones de SERVICE TYPE según el cliente (SUNBELT / GENERAL) */
+
 function buildServiceOptions() {
-  const isSunbelt = isSunbeltCustomer();
-  const data = isSunbelt ? SERVICES_SUNBELT : SERVICES_GENERAL;
 
   serviceSelect.innerHTML = "";
+
   const placeholder = document.createElement("option");
   placeholder.value = "";
-  placeholder.textContent = "";
+  placeholder.textContent = "-- SELECT SERVICE --";
+  placeholder.disabled = true;
+  placeholder.selected = true;
+
   serviceSelect.appendChild(placeholder);
 
-  data.forEach(group => {
+  SERVICES.forEach(group => {
     const og = document.createElement("optgroup");
     og.label = group.groupLabel;
     serviceSelect.appendChild(og);
@@ -497,31 +483,32 @@ function buildServiceOptions() {
       opt.value = item.code;
       opt.dataset.label = item.label;
       opt.dataset.price = item.price;
-      const priceText = (item.price && item.price.toUpperCase() !== "N/C" && item.price.toUpperCase() !== "NC")
-        ? ` ($${item.price})`
-        : " (N/C)";
+
+      const priceText =
+        item.price && item.price !== "N/C"
+          ? ` ($${item.price})`
+          : " (N/C)";
+
       opt.textContent = item.label + priceText;
       og.appendChild(opt);
     });
   });
-
-  // Al cambiar de tipo de cliente, limpia costo y overlay
-  wcInput.value = "";
-  syncOverlays();
 }
 
-/* COSTO AUTO POR SERVICIO (usa data-price del option) */
 function updateWCByService() {
   const opt = serviceSelect.options[serviceSelect.selectedIndex];
-  if (!opt || !opt.dataset) return;
+  if (!opt) return;
 
-  const p = (opt.dataset.price || "").toUpperCase().trim();
-  if (!p || p === "N/C" || p === "NC") {
+  const price = (opt.dataset.price || "").toUpperCase().trim();
+
+  if (!price || price === "N/C" || price === "NC") {
     wcInput.value = "N/C";
   } else {
-    wcInput.value = p;
+    wcInput.value = price;
   }
 }
+
+
 
 /* Cargar formato original y valores iniciales */
 window.addEventListener("DOMContentLoaded", () => {
@@ -539,9 +526,7 @@ customerInput.addEventListener('focus', e => e.target.select());
 rigInput.addEventListener('focus', e => e.target.select());
 techInput.addEventListener('focus', e => e.target.select());
 
-/* Si cambia el CUSTOMER NAME, reconstruir lista de servicios */
-customerInput.addEventListener("blur", buildServiceOptions);
-customerInput.addEventListener("input", buildServiceOptions);
+
 
 /* Cambio de servicio = actualizar costo y overlays */
 serviceSelect.addEventListener("change", () => {
@@ -636,22 +621,34 @@ function syncOverlays(){
   techOverlay.textContent = techInput.value || "";
 
   // texto limpio del servicio
-  let srvLabel = "";
+   let srvLabel = "";
   const opt = serviceSelect.options[serviceSelect.selectedIndex];
-  if (opt) {
-    srvLabel = opt.dataset.label || opt.textContent || "";
+
+  // solo mostrar si es un servicio REAL
+  if (opt && opt.value) {
+  srvLabel = opt.dataset.label || "";
   }
-  serviceTypeOverlay.textContent = srvLabel;
+
+serviceTypeOverlay.textContent = srvLabel;
+
 
   commentsOverlay.textContent = descInput.value || "";
 
   // Lógica W/C vs N/C
+    const hasService =
+  serviceSelect.value && serviceSelect.value !== "";
+
+if (!hasService) {
+  wcOverlay.textContent = "";
+} else {
   const wcRaw = (wcInput.value || "").trim().toUpperCase();
   if (!wcRaw || wcRaw === "N/C" || wcRaw === "NC") {
     wcOverlay.textContent = "N/C";
   } else {
     wcOverlay.textContent = `W/C - $${wcInput.value}`;
   }
+}
+
 
   aOverlay.textContent  = aInput.value  ? `A- ${aInput.value}` : "";
   dOverlay.textContent  = dInput.value  ? `D- ${dInput.value}` : "";
@@ -791,7 +788,8 @@ generatePDF.addEventListener("click", async () => {
   const folio  = folioInput.value.trim();
   const cust   = customerInput.value.trim().replace(/\s+/g," ");
   const well   = wellInput.value.trim().replace(/\s+/g," ");
-  const srv    = serviceSelect.value.trim().replace(/\s+/g," ");
+  const srvOpt = serviceSelect.options[serviceSelect.selectedIndex];
+  const srv = srvOpt ? (srvOpt.dataset.label || "").replace(/\s+/g," ") : "";
   let desc     = descInput.value.trim().split(/\s+/).slice(0,3).join(" ");
 
   let wcStatus = "NC";
