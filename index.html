@@ -529,27 +529,6 @@ window.addEventListener("DOMContentLoaded", () => {
   ticketImg.src = DEFAULT_BG_PATH;
   ticketImg.style.display = "block";
 
-  const now  = new Date();
-  const yyyy = now.getFullYear();
-  const mm   = String(now.getMonth() + 1).padStart(2,'0');
-  const dd   = String(now.getDate()).padStart(2,'0');
-  dateInput.value = `${yyyy}-${mm}-${dd}`;
-
-  techInput.value     = "ULISES RANGEL";
-  customerInput.value = "EOG";
-  rigInput.value      = "COMPLETIONS";
-
-  hqAddr.value = "32.700957173569805, -103.1492677516";
-
-  const end   = new Date(now.getTime() + 5 * 60000);
-  const start = new Date(end.getTime() - 60 * 60000);
-
-  const fmt = d =>
-    String(d.getHours()).padStart(2,'0') + ":" +
-    String(d.getMinutes()).padStart(2,'0');
-
-  aInput.value = fmt(start);
-  dInput.value = fmt(end);
 
   // Construir lista inicial (GENERAL, porque customer=EOG)
   buildServiceOptions();
@@ -923,12 +902,7 @@ document.getElementById("copyTitle").addEventListener("click", () => {
       document.body.removeChild(temp);
       alert("TITLE COPIED:\n" + title);
     });
-
 });
-
-
-
-
 </script>
 </body>
 </html>
