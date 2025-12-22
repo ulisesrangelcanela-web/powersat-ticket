@@ -64,21 +64,21 @@
   .preview-wrap{flex:1; max-width:824px;}
 
   .ticket-canvas{
-    width:820px;
-    height:1050px;
-    background:#fff;
-    border:1px solid #ccc;
-    position:relative;
-    overflow:hidden;
-  }
+  width:820px;
+  height:auto;        /* ← CLAVE */
+  background:#fff;
+  border:1px solid #ccc;
+  position:relative;
+  overflow:hidden;
+}
 
   .ticket-bg{
-    position:absolute;
-    top:0; left:0;
-    width:100%; height:100%;
-    object-fit:contain;
-    pointer-events:none;
-  }
+  width:100%;
+  height:auto;
+  display:block;
+  pointer-events:none;
+}
+
 
   .overlay{
     position:absolute;
@@ -129,31 +129,33 @@
 
   /* ======== RESPONSIVE PARA CELULARES ======== */
   @media (max-width: 768px) {
-    body {
-      margin: 8px;
-      overflow-x: hidden;
-    }
-    .container {
-      flex-direction: column;
-      gap: 20px;
-    }
-    .form {
-      width: 100% !important;
-      max-height: unset !important;
-    }
-    .preview-wrap {
-      width: 100% !important;
-      max-width: 100% !important;
-      overflow-x: auto;
-    }
-    .ticket-canvas {
-      transform: scale(0.52);
-      transform-origin: top left;
-      width: 820px;
-      height: 1050px;
-      margin-bottom: 30px;
-    }
+  body {
+    margin: 8px;
+    overflow-x: hidden;
   }
+  .container {
+    flex-direction: column;
+    gap: 20px;
+  }
+  .form {
+    width: 100% !important;
+    max-height: unset !important;
+  }
+  .preview-wrap {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: auto;
+  }
+  .ticket-canvas {
+  width: 820px;
+  height: auto; 
+  background: #fff;
+  border: 1px solid #ccc;
+  position: relative;
+  overflow: hidden;
+ }
+}
+
 
   /* ===== Modal Responsive Fix ===== */
   #trelloModal {
@@ -162,7 +164,7 @@
     top:0; left:0;
     width:100%; height:100%;
     background:rgba(0,0,0,0.5);
-    backdrop-filter:blur(4px);
+    
     z-index:9999;
     overflow:auto;
     padding:20px;
@@ -300,7 +302,14 @@
   <div class="panel preview-wrap">
     <div id="ticketCanvas" class="ticket-canvas">
 
-      <img id="ticketImg" class="ticket-bg" src="" />
+      <img
+      id="ticketImg"
+      class="ticket-bg"
+      src="formatoOriginal.jpeg"
+        crossorigin="anonymous"
+      />
+
+
 
       <div id="folioOverlay" class="overlay"></div>
       <div id="stateCodeOverlay" class="overlay"></div>
@@ -337,8 +346,7 @@
 </div>
 
 <script>
-/* Ruta por defecto */
-const DEFAULT_BG_PATH = "formatoOriginal.jpeg";
+
 
 
 const EARTH_RADIUS_MI = 3958.8;
@@ -513,8 +521,8 @@ function updateWCByService() {
 /* Cargar formato original y valores iniciales */
 window.addEventListener("DOMContentLoaded", () => {
 
-  ticketImg.src = DEFAULT_BG_PATH;
-  ticketImg.style.display = "block";
+  
+ 
 
 
   // Construir lista inicial (GENERAL, porque customer=EOG)
@@ -555,15 +563,12 @@ rtManual.addEventListener("input", () => {
   rtManual.dataset.autofilled = "false";
 });
 
-/* Subir formato */
 bgInput.addEventListener('change', e => {
   const f = e.target.files?.[0];
-  if (!f) {
-    ticketImg.src = DEFAULT_BG_PATH;
-    return;
-  }
+  if (!f) return;
   ticketImg.src = URL.createObjectURL(f);
 });
+
 
 /* Fecha MDY */
 function formatDateMDY(v){
@@ -571,6 +576,17 @@ function formatDateMDY(v){
   const p = v.split("-");
   return `${p[1]}-${p[2]}-${p[0]}`;
 }
+
+  /* Hora militar HHMM desde input type="time" (HH:MM) */
+function timeToHHMM(v){
+  if(!v) return "";
+  const m = v.match(/^(\d{1,2}):(\d{2})$/);
+  if(!m) return "";
+  const hh = m[1].padStart(2,"0");
+  const mm = m[2];
+  return hh + mm; // "08:00" -> "0800", "20:00" -> "2000"
+}
+
 
 /* Resolver siglas */
 function stateToCode(n){
@@ -650,8 +666,8 @@ if (!hasService) {
 }
 
 
-  aOverlay.textContent  = aInput.value  ? `A- ${aInput.value}` : "";
-  dOverlay.textContent  = dInput.value  ? `D- ${dInput.value}` : "";
+  aOverlay.textContent  = aInput.value ? `A- ${timeToHHMM(aInput.value)}` : "";
+  dOverlay.textContent  = dInput.value ? `D- ${timeToHHMM(dInput.value)}` : "";
   rtOverlay.textContent = rtManual.value ? `R/T- ${rtManual.value} MILES` : "";
 }
 
@@ -691,43 +707,53 @@ function computeAndMaybeSetRT(changedByWorkAddr=false){
 }));
 
 /* Obtener ubicación */
+/* Obtener ubicación (FIX iOS compatible) */
 locBtn.addEventListener("click", () => {
-  if (!navigator.geolocation){
-    alert("GPS no soportado.");
+
+  if (!("geolocation" in navigator)) {
+    alert("GPS not supported on this device.");
     return;
   }
 
-  navigator.geolocation.getCurrentPosition(async pos => {
+  navigator.geolocation.getCurrentPosition(
+    async (pos) => {
 
-    const lat = pos.coords.latitude;
-    const lon = pos.coords.longitude;
+      const lat = pos.coords.latitude;
+      const lon = pos.coords.longitude;
 
-    try{
-      const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&addressdetails=1`;
-      const resp = await fetch(url);
-      const data = await resp.json();
+      try {
+        const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&addressdetails=1`;
+        const resp = await fetch(url);
+        const data = await resp.json();
 
-      const addr = data.address || {};
-      const state = addr.state || "";
-      const county = addr.county || addr.municipality || addr.region || "";
+        const addr = data.address || {};
+        const state = addr.state || "";
+        const county = addr.county || addr.municipality || addr.region || "";
 
-      workAddr.value = `${lat.toFixed(6)}, ${lon.toFixed(6)}`;
-      parishInput.value = county;
-      stateCodeInput.value = stateToCode(state) || state;
+        workAddr.value = `${lat.toFixed(6)}, ${lon.toFixed(6)}`;
+        parishInput.value = county;
+        stateCodeInput.value = stateToCode(state) || state;
 
-      computeAndMaybeSetRT();
-      syncOverlays();
+        computeAndMaybeSetRT();
+        syncOverlays();
 
-    } catch(e){
-      console.error(e);
-      alert("No se pudo obtener dirección desde GPS.");
+      } catch (e) {
+        console.error(e);
+        alert("Could not resolve address from GPS.");
+      }
+
+    },
+    (err) => {
+      alert("GPS error: " + err.message);
+    },
+    {
+      enableHighAccuracy: false, // CLAVE para iOS
+      timeout: 15000,
+      maximumAge: 0
     }
-
-  }, err => alert("No se pudo obtener GPS: " + err.message), {
-    enableHighAccuracy:true,
-    timeout:10000
-  });
+  );
 });
+
 
 /* Botón: generar texto estilo Trello/Calendar */
 fillBtn.addEventListener("click", () => {
@@ -748,8 +774,8 @@ fillBtn.addEventListener("click", () => {
     ? "N/C"
     : `W/C - $${wcInput.value}`;
 
-  const aTime = aInput.value ? `A- ${aInput.value}` : "";
-  const dTime = dInput.value ? `D- ${dInput.value}` : "";
+  const aTime = aInput.value ? `A- ${timeToHHMM(aInput.value)}` : "";
+  const dTime = dInput.value ? `D- ${timeToHHMM(dInput.value)}` : "";
   const rt    = rtManual.value ? `R/T- ${rtManual.value} MILES` : "";
   const tech  = techInput.value || "";
 
@@ -789,50 +815,83 @@ generatePDF.addEventListener("click", async () => {
   const cust   = customerInput.value.trim().replace(/\s+/g," ");
   const well   = wellInput.value.trim().replace(/\s+/g," ");
   const srvOpt = serviceSelect.options[serviceSelect.selectedIndex];
-  const srv = srvOpt ? (srvOpt.dataset.label || "").replace(/\s+/g," ") : "";
+  const srv    = srvOpt ? (srvOpt.dataset.label || "").replace(/\s+/g," ") : "";
   let desc     = descInput.value.trim().split(/\s+/).slice(0,3).join(" ");
 
   let wcStatus = "NC";
   if (wcInput.value.trim() !== "" && wcInput.value.trim().toUpperCase() !== "N/C") {
-      wcStatus = "WC";
+    wcStatus = "WC";
   }
 
-  const fileName = `${state}-${folio} ${cust} ${well} ${srv} ${desc} ${wcStatus}`.toUpperCase();
-
-  //  Abrimos ventana ANTES de generar el PDF (solo iOS)
-  const pdfWindow = window.open("", "_blank");
-
-  // Si Safari bloqueó la ventana, avisamos
-  if (!pdfWindow) {
-    alert("Safari bloqueó la ventana emergente. Activa pop-ups.");
-    return;
-  }
+  const fileName =
+    `${state}-${folio} ${cust} ${well} ${srv} ${desc} ${wcStatus}`.toUpperCase();
 
   const area = document.getElementById("ticketCanvas");
-  const canvas = await html2canvas(area, { scale:2, useCORS:true });
-  const img = canvas.toDataURL("image/png");
+
+  /* ===== FIX iOS: CORTAR OVERFLOW REAL ===== */
+area.style.overflow = "hidden";
+
+  /* ===== FORZAR SCROLL TOP (Safari bug) ===== */
+  area.scrollTop = 0;
+  area.scrollLeft = 0;
+
+  /* ===== SCALE ADAPTATIVO ===== */
+  const scale = /iPhone|iPad|iPod/i.test(navigator.userAgent) ? 1 : 2;
+
+  //FIX SAFARI: asegurar que el modal NO existe al renderizar
+  document.getElementById("trelloModal").style.display = "none";
+  
+  
+  const rect = area.getBoundingClientRect();
+
+const canvas = await html2canvas(area, {
+  scale,
+  useCORS: true,
+  backgroundColor: "#ffffff",
+  width: rect.width,
+  height: rect.height
+});
+
+
+  const img = canvas.toDataURL("image/jpeg", 0.85);
+
 
   const { jsPDF } = window.jspdf;
   const pdf = new jsPDF({
-    unit:"px",
-    format:[canvas.width, canvas.height]
-  });
+  orientation: "portrait",
+  unit: "pt",
+  format: "a4"
+});
 
-  pdf.addImage(img,"PNG",0,0,canvas.width,canvas.height);
+const pdfWidth = 595.28;
+const pdfHeight = 841.89;
 
-  //  Crear blob manualmente
+pdf.addImage(img, "JPEG", 0, 0, pdfWidth, pdfHeight);
+
   const blob = pdf.output("blob");
-  const url = URL.createObjectURL(blob);
+const url = URL.createObjectURL(blob);
 
-// Mostrar el PDF en ventana nueva
-pdfWindow.location.href = url;
-pdfWindow.document.title = `${fileName}.pdf`;
+const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+if (isIOS) {
+  window.location.href = url;
+} else {
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${fileName}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
 
 
-});   // ← AQUÍ SE CIERRA EL BLOQUE DEL PDF (faltaba)
 
+// liberar memoria después
+setTimeout(() => URL.revokeObjectURL(url), 1000);
 
+});
 
+   // ← AQUÍ SE CIERRA EL BLOQUE DEL PDF (faltaba)
 
 /* JSON Export */
 downloadJSON.addEventListener("click", () => {
@@ -904,3 +963,4 @@ document.getElementById("copyTitle").addEventListener("click", () => {
 </script>
 </body>
 </html>
+
