@@ -3,40 +3,38 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Powersat Service Ticket Editor</title>
+<title>Powersat Tools (Service Ticket + JSA)</title>
 
-<!-- Librerías para exportar PDF -->
+<!-- Librerías (UNA SOLA VEZ para ambos proyectos) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
   :root{ --accent:#0b63d8; --muted:#444; --card:#fff; }
   body{font-family:Arial, Helvetica, sans-serif; background:#f3f5f8; margin:16px; color:#111;}
-  .container{display:flex; gap:18px; align-items:flex-start;}
-  .panel{background:var(--card); padding:12px; border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,0.06);}
-
-  .panel.preview-wrap{
-    padding:0;
-    border:none;
-    box-shadow:none;
+  .section-sep{height:14px;}
+  .section-title{
+    display:flex; gap:12px; align-items:center; margin:0 0 10px 0; flex-wrap:wrap;
   }
+  .small{font-size:12px; color:#444;}
+  .hr-soft{border:none; height:1px; background:rgba(0,0,0,0.08); margin:18px 0;}
+</style>
 
-  .form{width:380px; max-height:86vh; overflow:auto;}
-  label{
-  display:block;
-  margin-top:8px;
-  font-size:12px;        /* ↓ más pequeño */
-  font-weight:600;       /* sigue legible */
-  letter-spacing:0.4px;  /* look más profesional */
-  color:#555;
-  }
+<!-- =========================
+     PROJECT 1 CSS (scoped)
+     ========================= -->
+<style>
+#ticketApp .container{display:flex; gap:18px; align-items:flex-start;}
+#ticketApp .panel{background:var(--card); padding:12px; border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,0.06);}
+#ticketApp .panel.preview-wrap{ padding:0; border:none; box-shadow:none; }
+#ticketApp .form{width:380px; max-height:none; overflow:visible;}
+#ticketApp label{ display:block; margin-top:8px; font-size:12px; font-weight:600; letter-spacing:0.4px; color:#555; }
 
-
-  input[type="text"],
-  input[type="time"],
-  input[type="date"],
-  select,
-  textarea{
+#ticketApp input[type="text"],
+#ticketApp input[type="time"],
+#ticketApp input[type="date"],
+#ticketApp select,
+#ticketApp textarea{
   width:100%;
   padding:9px 10px;
   margin-top:4px;
@@ -44,320 +42,538 @@
   border-radius:6px;
   box-sizing:border-box;
   text-transform:uppercase;
-
-  font-size:15px;   /* <--MÁS GRANDE */
+  font-size:15px;
   font-weight:500;
 }
 
+#ticketApp .btn{
+  display:inline-block;
+  padding:8px 10px;
+  margin-top:8px;
+  border-radius:6px;
+  cursor:pointer;
+  background:var(--accent);
+  color:#fff;
+  border:none;
+}
 
-  .btn{
-    display:inline-block;
-    padding:8px 10px;
-    margin-top:8px;
-    border-radius:6px;
-    cursor:pointer;
-    background:var(--accent);
-    color:#fff;
-    border:none;
-  }
+#ticketApp .preview-wrap{flex:1; max-width:824px;}
 
-  .preview-wrap{flex:1; max-width:824px;}
-
-  .ticket-canvas{
+#ticketApp .ticket-canvas{
   width:820px;
-  height:auto;        /* ← CLAVE */
+  height:auto;
   background:#fff;
   border:1px solid #ccc;
   position:relative;
   overflow:hidden;
 }
+#ticketApp .ticket-bg{ width:100%; height:auto; display:block; pointer-events:none; }
 
-  .ticket-bg{
+#ticketApp .overlay{
+  position:absolute;
+  pointer-events:none;
+  color:#000;
+  font-size:15px;
+  white-space:pre-wrap;
+  text-transform:uppercase;
+}
+
+#ticketApp #folioOverlay{ right:45px; top:60px; font-weight:700; font-size:16px; }
+#ticketApp #stateCodeOverlay{ right:97px; top:60px; font-size:16px; font-weight:600; }
+
+#ticketApp #customerNameOverlay{ top:120px; left:17%; transform:translateX(-50%); text-align:center; }
+#ticketApp #rigNameOverlay{ top:120px; left:50%; transform:translateX(-50%); text-align:center; }
+#ticketApp #wellNameOverlay{ top:162px; left:50%; transform:translateX(-50%); text-align:center; }
+#ticketApp #parishOverlay{ top:202px; left:50%; transform:translateX(-50%); text-align:center; }
+
+#ticketApp #dateOverlay{ top:120px; left:82%; transform:translateX(-50%); text-align:center; }
+#ticketApp #techOverlay{ top:238px; left:83%; transform:translateX(-50%); text-align:center; }
+
+#ticketApp #serviceTypeOverlay{
+  left:40px; right:391px; top:585px;
+  font-size:15px; font-weight:400; text-align:left;
+}
+
+#ticketApp #commentsOverlay{
+  top:609px;
+  left:23%;
+  transform:translateX(-50%);
+  width:300px;
+  height:126px;
+  overflow-y:hidden;
+  font-size:15px;
+  line-height:1.8;
+}
+
+#ticketApp #wcOverlay{ left:45px; top:755px; }
+#ticketApp #aOverlay{ left:45px; top:783px; }
+#ticketApp #dOverlay{ left:45px; top:810px; }
+#ticketApp #rtOverlay{ left:45px; top:832px; }
+
+@media(max-width:1100px){
+  #ticketApp .ticket-canvas{ transform:scale(0.85); transform-origin:top left; }
+}
+
+/* Responsive móviles */
+@media (max-width: 768px) {
+  #ticketApp { margin: 0; }
+  #ticketApp .container { flex-direction: column; gap: 20px; }
+  #ticketApp .form { width: 100% !important; max-height: unset !important; }
+  #ticketApp .preview-wrap { width: 100% !important; max-width: 100% !important; overflow-x: auto; }
+  #ticketApp .ticket-canvas { width: 820px; }
+}
+
+/* Modal */
+#ticketApp #trelloModal {
+  display:none;
+  position:fixed;
+  top:0; left:0;
+  width:100%; height:100%;
+  background:rgba(0,0,0,0.5);
+  z-index:9999;
+  overflow:auto;
+  padding:20px;
+}
+#ticketApp #trelloModal .modal-box {
+  background:white;
+  width:90%;
+  max-width:420px;
+  margin:auto;
+  margin-top:40px;
+  padding:15px;
+  border-radius:8px;
+  box-shadow:0 4px 12px rgba(0,0,0,0.35);
+  max-height:90vh;
+  overflow-y:auto;
+}
+#ticketApp #trelloModal textarea {
+  width:100%;
+  height:220px;
+  font-size:15px;
+  padding:8px;
+  text-transform:uppercase;
+}
+#ticketApp .modal-buttons {
+  margin-top: 10px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+@media (max-width: 480px) {
+  #ticketApp #trelloModal .modal-box { width: 85%; max-width: 310px; margin-top: 20px; padding: 10px; }
+  #ticketApp #trelloModal textarea { height: 160px; font-size: 14px; }
+}
+</style>
+
+<!-- =========================
+     PROJECT 2 CSS (scoped)
+     ========================= -->
+<style>
+
+#jsaApp{ -webkit-text-size-adjust: 100%;text-size-adjust: 100%;}
+
+
+#jsaApp .topbar{display:flex; gap:12px; align-items:center; margin-bottom:10px; flex-wrap:wrap;}
+#jsaApp .container{display:flex; gap:18px; align-items:flex-start;}
+#jsaApp .panel{background:var(--card); padding:12px; border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,0.06);}
+#jsaApp .form{width:420px; max-height:none; overflow:visible;}
+
+#jsaApp label{display:block; margin-top:8px; font-size:12px; font-weight:600; letter-spacing:0.4px; color:#555;}
+#jsaApp input[type="text"], #jsaApp input[type="date"], #jsaApp select, #jsaApp textarea{
+  width:100%; padding:9px 10px; margin-top:4px;
+  border:1px solid #ddd; border-radius:6px; box-sizing:border-box;
+  text-transform:uppercase; font-size:14px; font-weight:500;
+}
+#jsaApp textarea{resize:vertical;}
+#jsaApp .btn{
+  display:inline-block; padding:8px 10px; margin-top:8px;
+  border-radius:6px; cursor:pointer; background:var(--accent);
+  color:#fff; border:none;
+}
+#jsaApp .btn.secondary{ background:#777; }
+#jsaApp .btn.good{ background:#0a8; }
+#jsaApp .btn.warn{ background:#b00020; }
+#jsaApp .row{display:flex; gap:10px;}
+#jsaApp .row > div{flex:1;}
+
+#jsaApp .preview-wrap{flex:1; max-width:980px;}
+#jsaApp .tabs{display:flex; gap:8px; margin-bottom:8px; flex-wrap:wrap;}
+#jsaApp .tab{padding:8px 10px; border-radius:8px; border:1px solid #ddd; cursor:pointer; background:#fff;}
+#jsaApp .tab.active{border-color:var(--accent); box-shadow:0 2px 10px rgba(0,0,0,0.06);}
+#jsaApp .hint{font-size:12px; color:#333; margin:6px 0 0 0;}
+
+#jsaApp .jsa-canvas{
+  width:940px;
+  background:#fff;
+  border:1px solid #ccc;
+  position:relative;
+  overflow:hidden;
+}
+#jsaApp .jsa-bg{
   width:100%;
   height:auto;
   display:block;
   pointer-events:none;
+  position:relative;
+  z-index:0;
+}
+#jsaApp .overlay{
+  position:absolute;
+  z-index:10;
+  pointer-events:none;
+  color:#000;
+  font-size:8px;
+  white-space:pre-wrap;
+  text-transform:uppercase;
 }
 
-
-  .overlay{
-    position:absolute;
-    pointer-events:none;
-    color:#000;
-    font-size:15px;
-    white-space:pre-wrap;
-    text-transform:uppercase;
-  }
-
-  #folioOverlay{ right:45px; top:60px; font-weight:700; font-size:16px; }
-  #stateCodeOverlay{ right:97px; top:60px; font-size:16px; font-weight:600; }
-
-  #customerNameOverlay{ top:120px; left:17%; transform:translateX(-50%); text-align:center; }
-  #rigNameOverlay{ top:120px; left:50%; transform:translateX(-50%); text-align:center; }
-  #wellNameOverlay{ top:162px; left:50%; transform:translateX(-50%); text-align:center; }
-  #parishOverlay{ top:202px; left:50%; transform:translateX(-50%); text-align:center; }
-
-  #dateOverlay{ top:120px; left:82%; transform:translateX(-50%); text-align:center; }
-  #techOverlay{ top:238px; left:83%; transform:translateX(-50%); text-align:center; }
-
-  #serviceTypeOverlay{
-    left:40px; right:391px; top:585px;
-    font-size:15px; font-weight:400; text-align:left;
-  }
-
- 
-  #commentsOverlay{
-    top:609px;
-    left:23%;
-    transform:translateX(-50%);
-    width:300px;
-    height:126px;     /* antes 300px */
-    overflow-y:hidden;  /* antes hidden */
-    font-size:15px;
-    line-height:1.8;
+#jsaApp #jsa_ov_stepsBlock{
+  white-space: pre;
+  font-family: "Courier New", Courier, monospace;
+  letter-spacing: -0.2px;
+  transform: scaleX(0.70);
+  transform-origin: left top;
 }
-
-
-  #wcOverlay{ left:45px; top:755px; }
-  #aOverlay{ left:45px; top:783px; }
-  #dOverlay{ left:45px; top:810px; }
-  #rtOverlay{ left:45px; top:832px; }
-
-  @media(max-width:1100px){
-    .ticket-canvas{ transform:scale(0.85); transform-origin:top left; }
-  }
-
-  /* ======== RESPONSIVE PARA CELULARES ======== */
-  @media (max-width: 768px) {
-  body {
-    margin: 8px;
-    overflow-x: hidden;
-  }
-  .container {
-    flex-direction: column;
-    gap: 20px;
-  }
-  .form {
-    width: 100% !important;
-    max-height: unset !important;
-  }
-  .preview-wrap {
-    width: 100% !important;
-    max-width: 100% !important;
-    overflow-x: auto;
-  }
-  .ticket-canvas {
-  width: 820px;
-  height: auto; 
-  background: #fff;
-  border: 1px solid #ccc;
-  position: relative;
+#jsaApp #jsa_ov_taskP2{
+  white-space: nowrap;
   overflow: hidden;
- }
+  text-overflow: ellipsis;
 }
 
-
-  /* ===== Modal Responsive Fix ===== */
-  #trelloModal {
-    display:none;
-    position:fixed;
-    top:0; left:0;
-    width:100%; height:100%;
-    background:rgba(0,0,0,0.5);
-    
-    z-index:9999;
-    overflow:auto;
-    padding:20px;
-  }
-
-  #trelloModal .modal-box {
-    background:white;
-    width:90%;
-    max-width:420px;
-    margin:auto;
-    margin-top:40px;
-    padding:15px;
-    border-radius:8px;
-    box-shadow:0 4px 12px rgba(0,0,0,0.35);
-    max-height:90vh;
-    overflow-y:auto;
-  }
-
-  #trelloModal textarea {
-    width:100%;
-    height:220px;
-    font-size:15px;
-    padding:8px;
-    text-transform:uppercase;
-  }
-
-  .modal-buttons {
-    margin-top: 10px;
-    display: flex;
-    justify-content: flex-end;
-    gap: 8px;
-  }
-
-  /* FIX ESPECIAL PARA CELULARES PEQUEÑOS */
-  @media (max-width: 480px) {
-    #trelloModal .modal-box {
-      width: 85%;
-      max-width: 310px;
-      margin-top: 20px;
-      padding: 10px;
-    }
-    #trelloModal textarea {
-      height: 160px;
-      font-size: 14px;
-    }
-  }
+@media(max-width:1100px){
+  #jsaApp .jsa-canvas{ transform:scale(0.85); transform-origin:top left; }
+}
+@media (max-width: 768px) {
+  #jsaApp .container{flex-direction:column; gap:20px;}
+  #jsaApp .form{width:100% !important; max-height:unset !important;}
+  #jsaApp .preview-wrap{width:100% !important; max-width:100% !important; overflow-x:auto;}
+  #jsaApp .jsa-canvas{width:940px;}
+}
 </style>
 </head>
+
 <body>
 
-<div style="display:flex; gap:12px; align-items:center; margin-bottom:10px;">
-  <h3 style="margin:0; text-transform:uppercase;">POWERSAT SERVICE TICKET EDITOR</h3>
-  <div class="small">Fill out the fields and generate your PDF.</div>
-</div>
-
-<div class="container">
-
-  <div class="panel form">
-
-    <button id="locBtn" type="button" class="btn">GET GPS LOCATION</button>
-
-    <label>FOLIO</label>
-    <input id="folioInput" type="text" maxlength="5" inputmode="numeric" />
-
-    <label>STATE CODE</label>
-    <input id="stateCodeInput" type="text" maxlength="3" />
-
-    <label>CUSTOMER NAME</label>
-    <input id="customerInput" type="text" />
-
-    <label>RIG NAME</label>
-    <input id="rigInput" type="text" />
-
-    <label>WELL NAME</label>
-    <input id="wellInput" type="text" />
-
-    <label>PARISH / COUNTY</label>
-    <input id="parishInput" type="text" />
-
-    <label>DATE</label>
-    <input id="dateInput" type="date" />
-
-    <label>TECHNICIAN</label>
-    <input id="techInput" type="text" />
-
-    <label>SERVICE TYPE</label>
-    <!-- el contenido se llena desde JS según sea SUNBELT o GENERAL -->
-    <select id="serviceSelect"></select>
-
-    
-    <label>COMMENTS (SHORT)</label>
-    <select id="predComment">
-      <option value="">-- QUICK COMMENT --</option>
-      <option>OFFICE TRAILER</option>
-      <option>GENERATOR</option>
-      <option>TOWER</option>
-      <option>RIGS</option>
-      <option>COMM TOWER</option>
-      <option>COMM PACKAGES</option>
-      <option>BOOSTERS</option>
-      <option>PACKAGES</option>
-    </select>
-    <textarea id="descInput" rows="4"></textarea>
-
-    <label>W/C - $</label>
-    <input id="wcInput" type="text" />
-
-    <label>ARRIVAL TIME (A)</label>
-    <input id="aInput" type="time" />
-
-    <label>DEPARTURE TIME (D)</label>
-    <input id="dInput" type="time" />
-
-    <label>HQ COORDINATES (LAT,LON)</label>
-    <input id="hqAddr" type="text" value="32.700957173569805, -103.1492677516" />
-
-    <label>JOB LOCATION (LAT,LON)</label>
-    <input id="workAddr" type="text" />
-
-    <label>R/T - MILES</label>
-    <input id="rtManual" type="text" maxlength="5" inputmode="numeric" />
-
-    <div style="margin-top:10px;">
-      <button id="fillBtn" class="btn">TRELLO / CALENDAR</button>
-      <button id="generatePDF" class="btn" style="background:#0a8">GENERATE PDF</button>
-      <button id="copyTitle" class="btn" style="background:#0057ff;">COPY TITLE</button>
-      <button id="downloadJSON" class="btn" style="background:#777">EXPORT JSON</button>
-    </div>
-
-    <hr />
-    <div class="small"><b>UPLOAD FORM IMAGE</b></div>
-    <input id="bgInput" type="file" accept="image/*" />
+<!-- =========================
+     PROJECT 1 (TOP)
+     ========================= -->
+<section id="ticketApp">
+  <div class="section-title">
+    <h3 style="margin:0; text-transform:uppercase;">POWERSAT SERVICE TICKET EDITOR</h3>
+    <div class="small">Fill out the fields and generate your PDF.</div>
   </div>
 
-  <div class="panel preview-wrap">
-    <div id="ticketCanvas" class="ticket-canvas">
+  <div class="container">
+    <div class="panel form">
+            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+  <button id="locBtn" type="button" class="btn">GET GPS LOCATION</button>
 
-      <img
-      id="ticketImg"
-      class="ticket-bg"
-      src="formatoOriginal.jpeg"
-        crossorigin="anonymous"
-      />
-
-
-
-      <div id="folioOverlay" class="overlay"></div>
-      <div id="stateCodeOverlay" class="overlay"></div>
-      <div id="customerNameOverlay" class="overlay"></div>
-      <div id="rigNameOverlay" class="overlay"></div>
-      <div id="wellNameOverlay" class="overlay"></div>
-      <div id="parishOverlay" class="overlay"></div>
-      <div id="serviceTypeOverlay" class="overlay"></div>
-
-      <div id="dateOverlay" class="overlay"></div>
-      <div id="techOverlay" class="overlay"></div>
-      <div id="commentsOverlay" class="overlay"></div>
-
-      <div id="wcOverlay" class="overlay"></div>
-      <div id="aOverlay" class="overlay"></div>
-      <div id="dOverlay" class="overlay"></div>
-      <div id="rtOverlay" class="overlay"></div>
-      <div id="companyStampOverlay" class="overlay"></div>
-
-    </div>
-  </div>
+  <input id="manualCoord"
+         type="text"
+         placeholder="PASTE COORDS (LAT,LON) OR DMS"
+         style="flex:1; min-width:220px; padding:9px 10px; border:1px solid #ddd; border-radius:6px; box-sizing:border-box; text-transform:uppercase; font-size:13px; font-weight:500;" />
 </div>
 
-<!-- Modal OILFIELD -->
-<div id="trelloModal">
-  <div class="modal-box">
-    <h3 style="margin:5px 0 10px 0; text-transform:uppercase;">OPERATIONS NOTE</h3>
-    <textarea id="trelloText"></textarea>
-    <div class="modal-buttons">
-      <button id="copyTrello" class="btn" style="background:#0a8;">COPY</button>
-      <button id="closeModal" class="btn" style="background:#777;">CLOSE</button>
+
+
+      <label>FOLIO</label>
+      <input id="folioInput" type="text" maxlength="5" inputmode="numeric" />
+
+      <label>STATE CODE</label>
+      <input id="stateCodeInput" type="text" maxlength="3" />
+
+      <label>CUSTOMER NAME</label>
+      <input id="customerInput" type="text" />
+
+      <label>RIG NAME</label>
+      <input id="rigInput" type="text" />
+
+      <label>WELL NAME</label>
+      <input id="wellInput" type="text" />
+
+      <label>PARISH / COUNTY</label>
+      <input id="parishInput" type="text" />
+
+      <label>DATE</label>
+      <input id="dateInput" type="date" />
+
+      <label>TECHNICIAN</label>
+      <input id="techInput" type="text" />
+
+      <label>SERVICE TYPE</label>
+      <select id="serviceSelect"></select>
+
+      <label>COMMENTS (SHORT)</label>
+      <select id="predComment">
+        <option value="">-- QUICK COMMENT --</option>
+        <option>OFFICE TRAILER</option>
+        <option>GENERATOR</option>
+        <option>TOWER</option>
+        <option>RIGS</option>
+        <option>COMM TOWER</option>
+        <option>COMM PACKAGES</option>
+        <option>BOOSTERS</option>
+        <option>PACKAGES</option>
+      </select>
+      <textarea id="descInput" rows="4"></textarea>
+
+      <label>W/C - $</label>
+      <input id="wcInput" type="text" />
+
+      <label>ARRIVAL TIME (A)</label>
+      <input id="aInput" type="time" />
+
+      <label>DEPARTURE TIME (D)</label>
+      <input id="dInput" type="time" />
+
+      <label>HQ COORDINATES (LAT,LON)</label>
+      <input id="hqAddr" type="text" value="32.700957173569805, -103.1492677516" />
+
+      <label>JOB LOCATION (LAT,LON)</label>
+      <input id="workAddr" type="text" />
+
+      <label>R/T - MILES</label>
+      <input id="rtManual" type="text" maxlength="5" inputmode="numeric" />
+
+      <div style="margin-top:10px;">
+        <button id="copyTitle" class="btn" style="background:#0057ff;">COPY TITLE</button>
+        <button id="generatePDF" class="btn" style="background:#0a8">GENERATE PDF</button>
+        <button id="fillBtn" class="btn">TRELLO / CALENDAR</button>
+      </div>
+    </div>
+
+    <div class="panel preview-wrap">
+      <div id="ticketCanvas" class="ticket-canvas">
+        <img id="ticketImg" class="ticket-bg" src="formatoOriginal.jpeg" crossorigin="anonymous" />
+
+        <div id="folioOverlay" class="overlay"></div>
+        <div id="stateCodeOverlay" class="overlay"></div>
+        <div id="customerNameOverlay" class="overlay"></div>
+        <div id="rigNameOverlay" class="overlay"></div>
+        <div id="wellNameOverlay" class="overlay"></div>
+        <div id="parishOverlay" class="overlay"></div>
+        <div id="serviceTypeOverlay" class="overlay"></div>
+
+        <div id="dateOverlay" class="overlay"></div>
+        <div id="techOverlay" class="overlay"></div>
+        <div id="commentsOverlay" class="overlay"></div>
+
+        <div id="wcOverlay" class="overlay"></div>
+        <div id="aOverlay" class="overlay"></div>
+        <div id="dOverlay" class="overlay"></div>
+        <div id="rtOverlay" class="overlay"></div>
+        <div id="companyStampOverlay" class="overlay"></div>
+      </div>
     </div>
   </div>
-</div>
+
+  <!-- Modal OILFIELD -->
+  <div id="trelloModal">
+    <div class="modal-box">
+      <h3 style="margin:5px 0 10px 0; text-transform:uppercase;">OPERATIONS NOTE</h3>
+      <textarea id="trelloText"></textarea>
+      <div class="modal-buttons">
+        <button id="copyTrello" class="btn" style="background:#0a8;">COPY</button>
+        <button id="closeModal" class="btn" style="background:#777;">CLOSE</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="hr-soft"></div>
+
+<!-- =========================
+     PROJECT 2 (BOTTOM)
+     ========================= -->
+<section id="jsaApp">
+  <div class="section-title">
+    <h3 style="margin:0; text-transform:uppercase;">POWERSAT JSA EDITOR (2 PAGES)</h3>
+    <div class="small">Fill fields → preview overlays → generate 2-page PDF.</div>
+  </div>
+
+  <div class="container">
+
+    <!-- LEFT FORM -->
+    <div class="panel form">
+      <div class="row">
+        <div>
+          <label>SERVICE TYPE (REFERENCE)</label>
+          <select id="jsa_serviceSelect"></select>
+        </div>
+      </div>
+
+      <label>COMPANY</label>
+      <input id="jsa_companyInput" type="text" value="POWERSAT COMMUNICATIONS USA LP" />
+
+      <div class="row">
+        <div>
+          <label>WELL / SITE</label>
+          <input id="jsa_siteInput" type="text" placeholder="EOG - (SITE NAME)" />
+        </div>
+        <div>
+          <label>DATE</label>
+          <input id="jsa_dateInput" type="date" />
+        </div>
+      </div>
+
+      <label>TASK DESCRIPTION</label>
+      <textarea id="jsa_taskInput" rows="2" placeholder="EX: MOVE MOBILE COMMUNICATION TOWER TO NEW PAD, SETUP, POWER UP, VERIFY SIGNAL"></textarea>
+
+      <label>MOST SERIOUS POTENTIAL INJURY (ONE LINE)</label>
+      <input id="jsa_injuryInput" type="text" placeholder="EX: FALL FROM HEIGHT / STRUCK-BY / ELECTRICAL SHOCK" />
+
+      <hr />
+
+      <label>REQUIRED REFERENCES (CHECK)</label>
+      <div class="row">
+        <div>
+          <select id="jsa_refReviewed">
+            <option value="YES">YES</option>
+            <option value="NA">N/A</option>
+          </select>
+        </div>
+        <div>
+          <input id="jsa_refAttach" type="text" placeholder="ATTACH / LIST PROCEDURES" />
+        </div>
+      </div>
+
+      <label>RISK ASSESSMENT</label>
+      <div class="row">
+        <div>
+          <label style="margin-top:0;">MODIFY PROCEDURES?</label>
+          <select id="jsa_riskModify">
+            <option value="YES" selected>YES</option>
+            <option value="NO">NO</option>
+          </select>
+        </div>
+        <div>
+          <label style="margin-top:0;">SIGNIFICANT RISK REMAINS?</label>
+          <select id="jsa_riskRemains">
+            <option value="YES" selected>YES</option>
+            <option value="NO">NO</option>
+          </select>
+        </div>
+      </div>
+
+      <hr />
+
+      <label>PPE (CHECKLIST)</label>
+      <div class="row">
+        <div>
+          <select id="jsa_ppePreset">
+            <option value="">-- PPE PRESET --</option>
+            <option value="TOWER">TOWER</option>
+            <option value="TRAILER">OFFICE TRAILER</option>
+            <option value="GEN">GENERATOR</option>
+            <option value="RIGS">RIGS</option>
+          </select>
+        </div>
+        <div>
+          <input id="jsa_ppeOther" type="text" placeholder="OTHER PPE (SPECIFY)" />
+        </div>
+      </div>
+
+      <hr />
+
+      <label>JSA REVIEWER (SUPERVISOR OR DESIGNATE) - NAME</label>
+      <input id="jsa_reviewerName" type="text" placeholder="NAME" />
+      <label>JSA REVIEWER - COMPANY</label>
+      <input id="jsa_reviewerCompany" type="text" placeholder="COMPANY" />
+
+      <label>TASK LEADER - NAME</label>
+      <input id="jsa_leaderName" type="text" placeholder="NAME" />
+      <label>TASK LEADER - COMPANY</label>
+      <input id="jsa_leaderCompany" type="text" placeholder="COMPANY" />
+
+      <div class="row" style="align-items:flex-end;">
+        <div style="flex:1; max-width:210px;">
+          <label>WORK TEAM NAMES</label>
+          <textarea id="jsa_teamNames" rows="4" placeholder="EX:
+ULISES R.
+JOHN D.
+..."></textarea>
+        </div>
+
+        <div style="flex:1; min-width:140px;">
+          <label>COMPLETE (PG2)</label>
+          <select id="jsa_completeSelect">
+            <option value="BLANK">BLANK</option>
+            <option value="NO" selected>NO</option>
+            <option value="YES">YES</option>
+          </select>
+        </div>
+      </div>
+
+      <hr />
+
+       <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
+       <button id="jsa_genPdfBtn" class="btn good" type="button">GEN JSA (2PG) PDF</button>
+
+       <button id="genAllPdfBtn" class="btn" type="button" style="background:#0057ff;">
+        GEN TICKET + JSA'S PDF
+       </button>
+     </div>
+     </div> <!-- /panel form -->
+
+    <!-- RIGHT PREVIEW -->
+    <div class="panel preview-wrap">
+      <div class="tabs">
+        <div id="jsa_tabP1" class="tab active">PAGE 1 (REVIEW FORM)</div>
+        <div id="jsa_tabP2" class="tab">PAGE 2 (TASK STEPS)</div>
+      </div>
+      <div class="small" id="jsa_whichHint">Previewing Page 1</div>
+
+      <!-- PAGE 1 -->
+      <div id="jsa_canvasP1" class="jsa-canvas">
+        <img id="jsa_bg1" class="jsa-bg" src="" alt="JSA Page 1 background" crossorigin="anonymous" />
+        <div id="jsa_ov_company" class="overlay"></div>
+        <div id="jsa_ov_site" class="overlay"></div>
+        <div id="jsa_ov_date" class="overlay"></div>
+        <div id="jsa_ov_task" class="overlay"></div>
+        <div id="jsa_ov_injury" class="overlay"></div>
+        <div id="jsa_ov_refYes" class="overlay"></div>
+        <div id="jsa_ov_refNA" class="overlay"></div>
+        <div id="jsa_ov_refAttach" class="overlay"></div>
+
+        <div id="jsa_ov_riskModify_yes" class="overlay"></div>
+        <div id="jsa_ov_riskModify_no"  class="overlay"></div>
+        <div id="jsa_ov_riskRemains_yes" class="overlay"></div>
+        <div id="jsa_ov_riskRemains_no"  class="overlay"></div>
+
+        <div id="jsa_ov_ppeOther" class="overlay"></div>
+        <div id="jsa_ov_reviewerName" class="overlay"></div>
+        <div id="jsa_ov_reviewerCompany" class="overlay"></div>
+        <div id="jsa_ov_leaderName" class="overlay"></div>
+        <div id="jsa_ov_leaderCompany" class="overlay"></div>
+        <div id="jsa_ov_teamNames" class="overlay"></div>
+
+        <div id="jsa_ov_ppeHardHat" class="overlay"></div>
+        <div id="jsa_ov_ppeGlasses" class="overlay"></div>
+        <div id="jsa_ov_ppeShoes" class="overlay"></div>
+        <div id="jsa_ov_ppeGloves" class="overlay"></div>
+        <div id="jsa_ov_ppeOtherMark" class="overlay"></div>
+        <div id="jsa_ov_ppeOtherText" class="overlay"></div>
+      </div>
+
+      <!-- PAGE 2 -->
+      <div id="jsa_canvasP2" class="jsa-canvas" style="display:none; margin-top:12px;">
+        <img id="jsa_bg2" class="jsa-bg" src="" alt="JSA Page 2 background" crossorigin="anonymous" />
+        <div id="jsa_ov_taskP2" class="overlay"></div>
+        <div id="jsa_ov_stepsBlock" class="overlay"></div>
+      </div>
+    </div>
+  </div>
+</section>
 
 <script>
+/* ============================================================
+   PROJECT 1 JS (encapsulado para evitar choques)
+   ============================================================ */
+(function(){
+  const EARTH_RADIUS_MI = 3958.8;
 
-
-
-const EARTH_RADIUS_MI = 3958.8;
-
-
-/* ==== DEFINICIÓN GENERAL DE SERVICIOS ==== */
-const SERVICES = [
-
-  {
-    groupLabel: "--OFFICE TRAILER--",
-    items: [
+  const SERVICES = [
+    { groupLabel: "--OFFICE TRAILER--", items: [
       { code:"OFC_NEW_RIG_UP",   label:"NEW RIG UP - OFFICE TRAILER",   price:"400" },
       { code:"OFC_RIG_UP",       label:"RIG UP - OFFICE TRAILER",       price:"400" },
       { code:"OFC_RIG_OUT",      label:"RIG OUT - OFFICE TRAILER",      price:"350" },
@@ -367,12 +583,8 @@ const SERVICES = [
       { code:"OFC_SERVICE_CALL", label:"SERVICE CALL - OFFICE TRAILER", price:"N/C" },
       { code:"OFC_CHECK_NET",    label:"CHECK NET - OFFICE TRAILER",    price:"N/C" },
       { code:"OFC_CHECK_DTV",    label:"CHECK DIRECTV - OFFICE TRAILER",price:"N/C" }
-    ]
-  },
-
-  {
-    groupLabel: "--GENERATOR--",
-    items: [
+    ]},
+    { groupLabel: "--GENERATOR--", items: [
       { code:"GEN_NEW_RIG_UP",   label:"NEW RIG UP - GENERATOR",   price:"400" },
       { code:"GEN_RIG_UP",       label:"RIG UP - GENERATOR",       price:"400" },
       { code:"GEN_RIG_OUT",      label:"RIG OUT - GENERATOR",      price:"350" },
@@ -380,12 +592,8 @@ const SERVICES = [
       { code:"GEN_RIG_DOWN",     label:"RIG DOWN - GENERATOR",     price:"350" },
       { code:"GEN_RIG_MOVE",     label:"RIG MOVE - GENERATOR",     price:"400" },
       { code:"GEN_SERVICE_CALL", label:"SERVICE CALL - GENERATOR", price:"N/C" }
-    ]
-  },
-
-  {
-    groupLabel: "--TOWER--",
-    items: [
+    ]},
+    { groupLabel: "--TOWER--", items: [
       { code:"TWR_NEW_RIG_UP",   label:"NEW RIG UP - TOWER",        price:"650" },
       { code:"TWR_RIG_UP",       label:"RIG UP - TOWER",            price:"650" },
       { code:"TWR_RIG_OUT",      label:"RIG OUT - TOWER",           price:"450" },
@@ -395,12 +603,8 @@ const SERVICES = [
       { code:"TWR_SERVICE_CALL", label:"SERVICE CALL - TOWER",      price:"N/C" },
       { code:"TWR_CHECK_NET",    label:"CHECK NET - TOWER",         price:"N/C" },
       { code:"TWR_SITE_CHECK",   label:"SITE CHECK - TOWER",        price:"N/C" }
-    ]
-  },
-
-  {
-    groupLabel: "--RIGS--",
-    items: [
+    ]},
+    { groupLabel: "--RIGS--", items: [
       { code:"RIG_NEW_RIG_UP",      label:"NEW RIG UP",              price:"450" },
       { code:"RIG_RIG_UP",          label:"RIG UP",                  price:"400" },
       { code:"RIG_RIG_DOWN",        label:"RIG DOWN",                price:"350" },
@@ -416,370 +620,689 @@ const SERVICES = [
       { code:"RIG_CHECK_SHACK",     label:"CHECK SHACK BOOSTER",     price:"N/C" },
       { code:"RIG_SITE_CHECK",      label:"SITE CHECK",              price:"N/C" },
       { code:"RIG_SPECIAL",         label:"SPECIAL SERVICES",        price:"500" }
-    ]
-  }
+    ]}
+  ];
 
-];
+  const folioInput      = document.getElementById('folioInput');
+  const stateCodeInput  = document.getElementById('stateCodeInput');
+  const customerInput   = document.getElementById('customerInput');
+  const rigInput        = document.getElementById('rigInput');
+  const wellInput       = document.getElementById('wellInput');
+  const parishInput     = document.getElementById('parishInput');
+  const dateInput       = document.getElementById('dateInput');
+  const techInput       = document.getElementById('techInput');
+  const serviceSelect   = document.getElementById('serviceSelect');
+  const predComment     = document.getElementById('predComment');
+  const descInput       = document.getElementById('descInput');
+  const wcInput         = document.getElementById('wcInput');
+  const aInput          = document.getElementById('aInput');
+  const dInput          = document.getElementById('dInput');
 
+  const hqAddr          = document.getElementById('hqAddr');
+  const workAddr        = document.getElementById('workAddr');
+  const rtManual        = document.getElementById('rtManual');
 
-/* Bind DOM */
-const folioInput      = document.getElementById('folioInput');
-const stateCodeInput  = document.getElementById('stateCodeInput');
-const customerInput   = document.getElementById('customerInput');
-const rigInput        = document.getElementById('rigInput');
-const wellInput       = document.getElementById('wellInput');
-const parishInput     = document.getElementById('parishInput');
-const dateInput       = document.getElementById('dateInput');
-const techInput       = document.getElementById('techInput');
-const serviceSelect   = document.getElementById('serviceSelect');
-const predComment     = document.getElementById('predComment');
-const descInput       = document.getElementById('descInput');
-const wcInput         = document.getElementById('wcInput');
-const aInput          = document.getElementById('aInput');
-const dInput          = document.getElementById('dInput');
-
-const hqAddr          = document.getElementById('hqAddr');
-const workAddr        = document.getElementById('workAddr');
-const rtManual        = document.getElementById('rtManual');
-
-const fillBtn         = document.getElementById('fillBtn');
-const generatePDF     = document.getElementById('generatePDF');
-const downloadJSON    = document.getElementById('downloadJSON');
-const bgInput         = document.getElementById('bgInput');
-const ticketImg       = document.getElementById('ticketImg');
-const locBtn          = document.getElementById('locBtn');
-
-/* Overlays */
-const folioOverlay        = document.getElementById('folioOverlay');
-const stateCodeOverlay    = document.getElementById('stateCodeOverlay');
-const customerNameOverlay = document.getElementById('customerNameOverlay');
-const rigNameOverlay      = document.getElementById('rigNameOverlay');
-const wellNameOverlay     = document.getElementById('wellNameOverlay');
-const parishOverlay       = document.getElementById('parishOverlay');
-const dateOverlay         = document.getElementById('dateOverlay');
-const techOverlay         = document.getElementById('techOverlay');
-const serviceTypeOverlay  = document.getElementById('serviceTypeOverlay');
-const commentsOverlay     = document.getElementById('commentsOverlay');
-
-const wcOverlay           = document.getElementById('wcOverlay');
-const aOverlay            = document.getElementById('aOverlay');
-const dOverlay            = document.getElementById('dOverlay');
-const rtOverlay           = document.getElementById('rtOverlay');
-const stampOverlay        = document.getElementById('companyStampOverlay');
-
-
-
-function buildServiceOptions() {
-
-  serviceSelect.innerHTML = "";
-
-  const placeholder = document.createElement("option");
-  placeholder.value = "";
-  placeholder.textContent = "-- SELECT SERVICE --";
-  placeholder.disabled = true;
-  placeholder.selected = true;
-
-  serviceSelect.appendChild(placeholder);
-
-  SERVICES.forEach(group => {
-    const og = document.createElement("optgroup");
-    og.label = group.groupLabel;
-    serviceSelect.appendChild(og);
-
-    group.items.forEach(item => {
-      const opt = document.createElement("option");
-      opt.value = item.code;
-      opt.dataset.label = item.label;
-      opt.dataset.price = item.price;
-
-      const priceText =
-        item.price && item.price !== "N/C"
-          ? ` ($${item.price})`
-          : " (N/C)";
-
-      opt.textContent = item.label + priceText;
-      og.appendChild(opt);
-    });
-  });
-}
-
-function updateWCByService() {
-  const opt = serviceSelect.options[serviceSelect.selectedIndex];
-  if (!opt) return;
-
-  const price = (opt.dataset.price || "").toUpperCase().trim();
-
-  if (!price || price === "N/C" || price === "NC") {
-    wcInput.value = "N/C";
-  } else {
-    wcInput.value = price;
-  }
-}
-
-
-
-/* Cargar formato original y valores iniciales */
-window.addEventListener("DOMContentLoaded", () => {
-
+  const fillBtn         = document.getElementById('fillBtn');
+  const generatePDF     = document.getElementById('generatePDF');
+  const locBtn          = document.getElementById('locBtn');
+  const manualCoord     = document.getElementById('manualCoord');
   
- 
 
 
-  // Construir lista inicial (GENERAL, porque customer=EOG)
-  buildServiceOptions();
-});
+  const folioOverlay        = document.getElementById('folioOverlay');
+  const stateCodeOverlay    = document.getElementById('stateCodeOverlay');
+  const customerNameOverlay = document.getElementById('customerNameOverlay');
+  const rigNameOverlay      = document.getElementById('rigNameOverlay');
+  const wellNameOverlay     = document.getElementById('wellNameOverlay');
+  const parishOverlay       = document.getElementById('parishOverlay');
+  const dateOverlay         = document.getElementById('dateOverlay');
+  const techOverlay         = document.getElementById('techOverlay');
+  const serviceTypeOverlay  = document.getElementById('serviceTypeOverlay');
+  const commentsOverlay     = document.getElementById('commentsOverlay');
 
-/* Acciones al hacer focus */
-customerInput.addEventListener('focus', e => e.target.select());
-rigInput.addEventListener('focus', e => e.target.select());
-techInput.addEventListener('focus', e => e.target.select());
+  const wcOverlay           = document.getElementById('wcOverlay');
+  const aOverlay            = document.getElementById('aOverlay');
+  const dOverlay            = document.getElementById('dOverlay');
+  const rtOverlay           = document.getElementById('rtOverlay');
+
+  function buildServiceOptions() {
+    serviceSelect.innerHTML = "";
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = "-- SELECT SERVICE --";
+    placeholder.disabled = true;
+    placeholder.selected = true;
+    serviceSelect.appendChild(placeholder);
+
+    SERVICES.forEach(group => {
+      const og = document.createElement("optgroup");
+      og.label = group.groupLabel;
+      serviceSelect.appendChild(og);
+
+      group.items.forEach(item => {
+        const opt = document.createElement("option");
+        opt.value = item.code;
+        opt.dataset.label = item.label;
+        opt.dataset.price = item.price;
+
+        const priceText =
+          item.price && item.price !== "N/C"
+            ? ` ($${item.price})`
+            : " (N/C)";
+
+        opt.textContent = item.label + priceText;
+        og.appendChild(opt);
+      });
+    });
+  }
+
+  function updateWCByService() {
+    const opt = serviceSelect.options[serviceSelect.selectedIndex];
+    if (!opt) return;
+    const price = (opt.dataset.price || "").toUpperCase().trim();
+    if (!price || price === "N/C" || price === "NC") wcInput.value = "N/C";
+    else wcInput.value = price;
+  }
+
+  function forceDigitsMax(el, maxLen){
+    el.value = el.value.replace(/\D/g,'').slice(0, maxLen);
+  }
+
+  function formatDateMDY(v){
+    if(!v) return "";
+    const p = v.split("-");
+    return `${p[1]}-${p[2]}-${p[0]}`;
+  }
+
+  function timeToHHMM(v){
+    if(!v) return "";
+    const m = v.match(/^(\d{1,2}):(\d{2})$/);
+    if(!m) return "";
+    const hh = m[1].padStart(2,"0");
+    const mm = m[2];
+    return hh + mm;
+  }
+
+        function stateToCode(stateName){
+  if(!stateName) return "";
+
+  // Normaliza: quita puntos, dobles espacios, etc.
+  const key = String(stateName)
+    .trim()
+    .replace(/\./g, "")
+    .replace(/\s+/g, " ");
+
+  const MAP = {
+    "Alabama":"AL",
+    "Alaska":"AK",
+    "Arizona":"AZ",
+    "Arkansas":"AR",
+    "California":"CA",
+    "Colorado":"CO",
+    "Connecticut":"CT",
+    "Delaware":"DE",
+    "Florida":"FL",
+    "Georgia":"GA",
+    "Hawaii":"HI",
+    "Idaho":"ID",
+    "Illinois":"IL",
+    "Indiana":"IN",
+    "Iowa":"IA",
+    "Kansas":"KS",
+    "Kentucky":"KY",
+    "Louisiana":"LA",
+    "Maine":"ME",
+    "Maryland":"MD",
+    "Massachusetts":"MA",
+    "Michigan":"MI",
+    "Minnesota":"MN",
+    "Mississippi":"MS",
+    "Missouri":"MO",
+    "Montana":"MT",
+    "Nebraska":"NE",
+    "Nevada":"NV",
+    "New Hampshire":"NH",
+    "New Jersey":"NJ",
+    "New Mexico":"NM",
+    "New York":"NY",
+    "North Carolina":"NC",
+    "North Dakota":"ND",
+    "Ohio":"OH",
+    "Oklahoma":"OK",
+    "Oregon":"OR",
+    "Pennsylvania":"PA",
+    "Rhode Island":"RI",
+    "South Carolina":"SC",
+    "South Dakota":"SD",
+    "Tennessee":"TN",
+    "Texas":"TX",
+    "Utah":"UT",
+    "Vermont":"VT",
+    "Virginia":"VA",
+    "Washington":"WA",
+    "West Virginia":"WV",
+    "Wisconsin":"WI",
+    "Wyoming":"WY",
+
+    // DC (común en reverse geocoding)
+    "District of Columbia":"DC",
+    "Washington DC":"DC",
+    "Washington D C":"DC",
+
+    // Territorios (por si te cae alguno)
+    "Puerto Rico":"PR",
+    "Guam":"GU",
+    "American Samoa":"AS",
+    "U.S. Virgin Islands":"VI",
+    "United States Virgin Islands":"VI",
+    "Northern Mariana Islands":"MP"
+  };
+
+  // Si ya viene como "NM" o "TX", lo respetamos
+  if (/^[A-Za-z]{2}$/.test(key)) return key.toUpperCase();
+
+  return MAP[key] || "";
+}
+
+
+  function deg2rad(x){ return x*Math.PI/180; }
+  function haversineMiles(lat1, lon1, lat2, lon2){
+    const dLat = deg2rad(lat2-lat1);
+    const dLon = deg2rad(lon2-lon1);
+    const a =
+      Math.sin(dLat/2)**2 +
+      Math.cos(deg2rad(lat1)) *
+      Math.cos(deg2rad(lat2)) *
+      Math.sin(dLon/2)**2;
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return EARTH_RADIUS_MI * c;
+  }
+
+  function parseLatLon(str){
+    if(!str) return null;
+    const m = str.trim().match(/(-?\d+(\.\d+)?)\s*,\s*(-?\d+(\.\d+)?)/);
+    if(!m) return null;
+    return { lat: parseFloat(m[1]), lon: parseFloat(m[3]) };
+  }
+  
+
+  // -----------------------------
+// COORD PARSING (DECIMAL + DMS)
+// -----------------------------
+function clamp(n, min, max){ return Math.min(max, Math.max(min, n)); }
+
+function dmsToDecimal(deg, min, sec, hemi){
+  const sign = (hemi === "S" || hemi === "W") ? -1 : 1;
+  const d = Math.abs(Number(deg || 0));
+  const m = Math.abs(Number(min || 0));
+  const s = Math.abs(Number(sec || 0));
+  return sign * (d + (m/60) + (s/3600));
+}
+
+// Parses MANY formats, including:
+// - Decimal: "32.123,-103.123" or "32.123 -103.123"
+// - DMS:     "32°42'03.4\"N 103°08'57.0\"W" (many variants)
+// - Labeled: "LATITUDE: 32° 9'57.06\"N\nLONGITUDE: 103°29'11.46\"W"
+function parseFlexibleCoords(input){
+  if(!input) return null;
+  let s = String(input).trim().toUpperCase();
+
+  // Normalize common symbols / spacing (robust copy/paste)
+s = s
+  // normaliza espacios invisibles y tabs
+  .replace(/[\u00A0\u2000-\u200B\u202F\u205F\u3000]/g, " ")
+  .replace(/\t/g, " ")
+  .replace(/\r/g, "\n")
+
+  // normaliza separadores comunes
+  .replace(/[，;]/g, ",")
+  .replace(/\u00B0/g, "°")
+
+  // comillas “raras” a comillas normales (por si viene de iPhone/WhatsApp)
+  .replace(/[“”]/g, '"')
+  .replace(/[‘’]/g, "'")
+
+  // OESTE / W
+  .replace(/\bO\b/g, "W")
+
+  // colapsa espacios pero respeta saltos de línea para labels
+  .replace(/[ ]{2,}/g, " ")
+  .trim();
+
+  // ---------------------------------------------------------
+  // 0) Handle labeled formats: LATITUDE: ...  LONGITUDE: ...
+  // ---------------------------------------------------------
+  // Accepts LAT, LATITUDE, N, Y ; LON, LONGITUDE, LNG, X
+  // Captures value up to newline/semicolon or until next label.
+  // Labeled formats: capture until the next label OR end of string
+const latLabelRe = /\b(LAT|LATITUDE|Y)\b\s*[:=]?\s*([\s\S]*?)(?=\b(LON|LONGITUDE|LNG|X)\b|$)/i;
+const lonLabelRe = /\b(LON|LONGITUDE|LNG|X)\b\s*[:=]?\s*([\s\S]*?)(?=\b(LAT|LATITUDE|Y)\b|$)/i;
+
+
+  const mLat = s.match(latLabelRe);
+  const mLon = s.match(lonLabelRe);
+
+  if(mLat && mLon){
+    // join as "LATVALUE LONVALUE"
+    const joined = `${mLat[2].trim()} ${mLon[2].trim()}`;
+    const res = parseFlexibleCoords(joined); // recurse into normal paths
+    if(res) return res;
+  }
+
+      // ---------------------------------------------------------
+// 1) Try decimal (comma OR whitespace OR newline separated)
+//    Also accepts inverted order: lon lat
+// ---------------------------------------------------------
+let mDec = s.match(/(-?\d{1,3}(?:\.\d+)?)\s*(?:,|\s)\s*(-?\d{1,3}(?:\.\d+)?)/);
+if(mDec){
+  let a = parseFloat(mDec[1]);
+  let b = parseFloat(mDec[2]);
+  if(Number.isFinite(a) && Number.isFinite(b)){
+    // normal: lat, lon
+    if(Math.abs(a) <= 90 && Math.abs(b) <= 180) return { lat: a, lon: b };
+
+    // inverted: lon, lat
+    if(Math.abs(a) <= 180 && Math.abs(b) <= 90) return { lat: b, lon: a };
+  }
+}
+
+
+  // ---------------------------------------------------------
+  // 2) Try DMS: "32°42'03.4\"N 103°08'57.0\"W" (and variants)
+  // NOTE: \D* before hemisphere fixes the " issue
+  // ---------------------------------------------------------
+  const dmsRe =
+    /(\d{1,3})\D+(\d{1,2})\D+(\d{1,2}(?:\.\d+)?)\D*([NS])[\s,]+(\d{1,3})\D+(\d{1,2})\D+(\d{1,2}(?:\.\d+)?)\D*([EW])/;
+
+  let mDms = s.match(dmsRe);
+  if(mDms){
+    const lat = dmsToDecimal(mDms[1], mDms[2], mDms[3], mDms[4]);
+    const lon = dmsToDecimal(mDms[5], mDms[6], mDms[7], mDms[8]);
+    if(Number.isFinite(lat) && Number.isFinite(lon)){
+      if(Math.abs(lat) <= 90 && Math.abs(lon) <= 180) return { lat, lon };
+    }
+  }
+
+  // ---------------------------------------------------------
+// 2b) Try DMS INVERTED: "103°08'57\"W 32°42'03\"N" (and comma variants)
+// ---------------------------------------------------------
+const dmsInvRe =
+  /(\d{1,3})\D+(\d{1,2})\D+(\d{1,2}(?:\.\d+)?)\D*([EW])[\s,]+(\d{1,3})\D+(\d{1,2})\D+(\d{1,2}(?:\.\d+)?)\D*([NS])/;
+
+let mDmsInv = s.match(dmsInvRe);
+if(mDmsInv){
+  const lon = dmsToDecimal(mDmsInv[1], mDmsInv[2], mDmsInv[3], mDmsInv[4]);
+  const lat = dmsToDecimal(mDmsInv[5], mDmsInv[6], mDmsInv[7], mDmsInv[8]);
+  if(Number.isFinite(lat) && Number.isFinite(lon)){
+    if(Math.abs(lat) <= 90 && Math.abs(lon) <= 180) return { lat, lon };
+  }
+}
+
+
+  // ---------------------------------------------------------
+  // 3) Try hemisphere-first: "N32 42 03.4 W103 08 57"
+  // ---------------------------------------------------------
+  const dmsRe2 =
+    /([NS])\s*(\d{1,3})\D+(\d{1,2})\D+(\d{1,2}(?:\.\d+)?)\D*[\s,]+([EW])\s*(\d{1,3})\D+(\d{1,2})\D+(\d{1,2}(?:\.\d+)?)/;
+
+  mDms = s.match(dmsRe2);
+  if(mDms){
+    const lat = dmsToDecimal(mDms[2], mDms[3], mDms[4], mDms[1]);
+    const lon = dmsToDecimal(mDms[6], mDms[7], mDms[8], mDms[5]);
+    if(Number.isFinite(lat) && Number.isFinite(lon)){
+      if(Math.abs(lat) <= 90 && Math.abs(lon) <= 180) return { lat, lon };
+    }
+  }
+
+  // 4) Decimal with labels in same line: "LAT 32.12 LON -103.48"
+const latDecRe = /\b(LAT|LATITUDE|Y)\b\s*[:=]?\s*(-?\d{1,2}(?:\.\d+)?)/i;
+const lonDecRe = /\b(LON|LONGITUDE|LNG|X)\b\s*[:=]?\s*(-?\d{1,3}(?:\.\d+)?)/i;
+const mLatDec = s.match(latDecRe);
+const mLonDec = s.match(lonDecRe);
+if(mLatDec && mLonDec){
+  const lat = parseFloat(mLatDec[2]);
+  const lon = parseFloat(mLonDec[2]);
+  if(Number.isFinite(lat) && Number.isFinite(lon) && Math.abs(lat)<=90 && Math.abs(lon)<=180){
+    return { lat, lon };
+  }
+}
+
+
+  return null;
+}
+
+
+  async function setWorkAddrFromFlexible(inputStr, { silent=false } = {}){
+  const p = parseFlexibleCoords(inputStr);
+  if(!p) return false;
+
+  await applyWorkCoords(p.lat, p.lon, { doGeocode:true, silent });
+  return true;
+}
 
 
 
-/* Cambio de servicio = actualizar costo y overlays */
-serviceSelect.addEventListener("change", () => {
+
+  function syncOverlays(){
+    folioOverlay.textContent = folioInput.value || "";
+    stateCodeOverlay.textContent = stateCodeInput.value || "";
+    customerNameOverlay.textContent = customerInput.value || "";
+    rigNameOverlay.textContent = rigInput.value || "";
+    wellNameOverlay.textContent = wellInput.value || "";
+    parishOverlay.textContent = parishInput.value || "";
+    dateOverlay.textContent = dateInput.value ? formatDateMDY(dateInput.value) : "";
+    techOverlay.textContent = techInput.value || "";
+
+    let srvLabel = "";
+    const opt = serviceSelect.options[serviceSelect.selectedIndex];
+    if (opt && opt.value) srvLabel = opt.dataset.label || "";
+    serviceTypeOverlay.textContent = srvLabel;
+
+    commentsOverlay.textContent = descInput.value || "";
+
+    const hasService = serviceSelect.value && serviceSelect.value !== "";
+    if (!hasService) wcOverlay.textContent = "";
+    else {
+      const wcRaw = (wcInput.value || "").trim().toUpperCase();
+      if (!wcRaw || wcRaw === "N/C" || wcRaw === "NC") wcOverlay.textContent = "N/C";
+      else wcOverlay.textContent = `W/C - $${wcInput.value}`;
+    }
+
+    aOverlay.textContent  = aInput.value ? `A- ${timeToHHMM(aInput.value)}` : "";
+    dOverlay.textContent  = dInput.value ? `D- ${timeToHHMM(dInput.value)}` : "";
+    rtOverlay.textContent = rtManual.value ? `R/T- ${rtManual.value} MILES` : "";
+  }
+    
+  
+  
+   window.ticketSyncOverlays = syncOverlays;
+
+  function computeAndMaybeSetRT(changedByWorkAddr=false){
+    const work = parseLatLon(workAddr.value);
+    if(!work) return;
+    const hq = parseLatLon(hqAddr.value);
+    if(!hq) return;
+
+    const milesOneWay = haversineMiles(hq.lat, hq.lon, work.lat, work.lon);
+    const ROAD_FACTOR = 1.4;
+    const milesRT = Math.round(milesOneWay * ROAD_FACTOR * 2);
+
+    if (changedByWorkAddr) rtManual.dataset.autofilled = "true";
+    if (rtManual.dataset.autofilled !== "false") {
+      rtManual.value = String(milesRT);
+      syncOverlays();
+    }
+  }
+
+  window.addEventListener("DOMContentLoaded", () => {
+    buildServiceOptions();
+  });
+
+  customerInput.addEventListener('focus', e => e.target.select());
+  rigInput.addEventListener('focus', e => e.target.select());
+  techInput.addEventListener('focus', e => e.target.select());
+
+        // ==========================
+// BRIDGE: Form1 -> Form2
+// ==========================
+const jsaSiteInput   = document.getElementById("jsa_siteInput");
+const jsaDateInput   = document.getElementById("jsa_dateInput");
+const jsaLeaderName  = document.getElementById("jsa_leaderName");
+const jsaTeamNames   = document.getElementById("jsa_teamNames");
+const jsaServiceSelect = document.getElementById("jsa_serviceSelect");
+
+         function mapServiceToJSA(srcCode){
+  if(!srcCode) return "";
+  const c = srcCode.toUpperCase().trim();
+
+  // -------------------------
+  // OFFICE TRAILER
+  // -------------------------
+  if (c.startsWith("OFC_")) {
+
+    // CHECK DIRECTV - OFFICE TRAILER -> SITE CHECK DIRECTV
+    if (c.includes("CHECK_DTV") || c.includes("DIRECTV")) return "SITE_CHECK_DIRECTV";
+
+    // SERVICE CALL / CHECK NET - OFFICE TRAILER -> SITE CHECK NET,HIBOOST,STARLINK
+    if (c.includes("SERVICE_CALL") || c.includes("CHECK_NET")) return "SITE_CHECK_NET";
+
+    // NEW RIG UP / RIG UP - OFFICE TRAILER -> OFC_RIG_UP
+    if (c.includes("NEW_RIG_UP") || c === "OFC_RIG_UP") return "OFC_RIG_UP";
+
+    // RIG OUT / RELEASE / RIG DOWN / RIG MOVE - OFFICE TRAILER -> OFC_RIG_DOWN
+    if (c.includes("RIG_OUT") || c.includes("RELEASE") || c.includes("RIG_DOWN") || c.includes("RIG_MOVE"))
+      return "OFC_RIG_DOWN";
+
+    return "";
+  }
+
+  // -------------------------
+  // GENERATOR
+  // -------------------------
+  if (c.startsWith("GEN_")) {
+
+    // SERVICE CALL - GENERATOR -> SITE CHECK GENERATOR
+    if (c.includes("SERVICE_CALL")) return "SITE_CHECK_GENERATOR";
+
+    // NEW RIG UP / RIG UP - GENERATOR -> GEN_RIG_UP
+    if (c.includes("NEW_RIG_UP") || c === "GEN_RIG_UP") return "GEN_RIG_UP";
+
+    // RIG OUT / RELEASE / RIG DOWN / RIG MOVE - GENERATOR -> GEN_RIG_DOWN
+    if (c.includes("RIG_OUT") || c.includes("RELEASE") || c.includes("RIG_DOWN") || c.includes("RIG_MOVE"))
+      return "GEN_RIG_DOWN";
+
+    return "";
+  }
+
+  // -------------------------
+  // TOWER
+  // -------------------------
+  if (c.startsWith("TWR_")) {
+
+    // SERVICE CALL / CHECK NET / SITE CHECK - TOWER -> SITE CHECK TOWER (new)
+    if (c.includes("SERVICE_CALL") || c.includes("CHECK_NET") || c.includes("SITE_CHECK"))
+      return "SITE_CHECK_TOWER";
+
+    // NEW RIG UP / RIG UP - TOWER -> TWR_RIG_UP
+    if (c.includes("NEW_RIG_UP") || c === "TWR_RIG_UP") return "TWR_RIG_UP";
+
+    // RIG OUT / RELEASE / RIG DOWN / TILT DOWN & UP - TOWER -> TWR_RIG_DOWN
+    if (c.includes("RIG_OUT") || c.includes("RELEASE") || c.includes("RIG_DOWN") || c.includes("TILT"))
+      return "TWR_RIG_DOWN";
+
+    return "";
+  }
+
+  // -------------------------
+  // RIGS
+  // -------------------------
+  if (c.startsWith("RIG_")) {
+
+    // SERVICE CALL / CHECK NET / CHECK SHACK BOOSTER / SITE CHECK / SPECIAL SERVICES -> SITE CHECK NET
+    if (
+      c.includes("SERVICE_CALL") ||
+      c.includes("CHECK_NET") ||
+      c.includes("CHECK_SHACK") ||
+      c.includes("SITE_CHECK") ||
+      c.includes("SPECIAL")
+    ) return "SITE_CHECK_NET";
+
+    // NEW RIG UP / RIG UP / NEW INTERCOM / NEW MICRO / NEW SHACK -> RIG_RIG_UP
+    if (
+      c.includes("NEW_RIG_UP") ||
+      c === "RIG_RIG_UP" ||
+      c.includes("NEW_INTERCOM") ||
+      c.includes("NEW_MICRO") ||
+      c.includes("NEW_SHACK")
+    ) return "RIG_RIG_UP";
+
+    // RIG DOWN / RIG OUT / RELEASE / RIG UP AFTER MOVE / RIG DOWN FOR MOVE -> RIG_RIG_DOWN
+    if (
+      c.includes("RIG_DOWN") ||
+      c.includes("RIG_OUT") ||
+      c.includes("RELEASE") ||
+      c.includes("UP_AFTER_MOVE") ||
+      c.includes("DOWN_FOR_MOVE")
+    ) return "RIG_RIG_DOWN";
+
+    return "";
+  }
+
+  return "";
+}
+
+
+
+  serviceSelect.addEventListener("change", () => {
   updateWCByService();
   syncOverlays();
+  pushToJSA();
 });
 
-/* Insertar comentarios rápidos */
-predComment.addEventListener("change", () => {
-  if (predComment.value) {
-    descInput.value = (descInput.value + " " + predComment.value).trim();
-    predComment.value = "";
+
+  predComment.addEventListener("change", () => {
+    if (predComment.value) {
+      descInput.value = (descInput.value + " " + predComment.value).trim();
+      predComment.value = "";
+      syncOverlays();
+    }
+  });
+
+  folioInput.addEventListener('input', () => forceDigitsMax(folioInput, 5));
+  rtManual.addEventListener('input', () => forceDigitsMax(rtManual, 5));
+  rtManual.addEventListener("input", () => { rtManual.dataset.autofilled = "false"; });
+
+  [
+    folioInput, stateCodeInput, customerInput, rigInput, wellInput, parishInput,
+    dateInput, techInput, predComment, descInput,
+    wcInput, aInput, dInput, rtManual, workAddr, hqAddr
+  ].forEach(el => el.addEventListener("blur", () => {
+    if (el === workAddr) computeAndMaybeSetRT(true);
+    if (el === hqAddr) computeAndMaybeSetRT(true);
     syncOverlays();
-  }
-});
+  }));
 
-/* SOLO NÚMEROS */
-function forceDigitsMax(el, maxLen){
-  el.value = el.value.replace(/\D/g,'').slice(0, maxLen);
-}
+             // --- Reverse geocode helper (shared) ---
+async function reverseGeocodeAndFill(lat, lon, { silent=false } = {}){
+  try{
+    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}&addressdetails=1`;
+    const resp = await fetch(url, { headers: { "Accept":"application/json" } });
+    const data = await resp.json();
 
-folioInput.addEventListener('input', () => forceDigitsMax(folioInput, 5));
-rtManual.addEventListener('input', () => forceDigitsMax(rtManual, 5));
+    const addr = data.address || {};
+    const state  = addr.state || "";
+    const county = addr.county || addr.municipality || addr.region || addr.state_district || "";
 
-rtManual.addEventListener("input", () => {
-  rtManual.dataset.autofilled = "false";
-});
-
-bgInput.addEventListener('change', e => {
-  const f = e.target.files?.[0];
-  if (!f) return;
-  ticketImg.src = URL.createObjectURL(f);
-});
-
-
-/* Fecha MDY */
-function formatDateMDY(v){
-  if(!v) return "";
-  const p = v.split("-");
-  return `${p[1]}-${p[2]}-${p[0]}`;
-}
-
-  /* Hora militar HHMM desde input type="time" (HH:MM) */
-function timeToHHMM(v){
-  if(!v) return "";
-  const m = v.match(/^(\d{1,2}):(\d{2})$/);
-  if(!m) return "";
-  const hh = m[1].padStart(2,"0");
-  const mm = m[2];
-  return hh + mm; // "08:00" -> "0800", "20:00" -> "2000"
-}
-
-
-/* Resolver siglas */
-function stateToCode(n){
-  if(!n) return "";
-  const map = {
-    "Texas":"TX",
-    "New Mexico":"NM",
-    "Nuevo México":"NM",
-    "Nuevo Leon":"NL",
-    "Nuevo León":"NL"
-  };
-  return map[n] || "";
-}
-
-/* Distancia Haversine */
-function deg2rad(x){ return x*Math.PI/180; }
-
-function haversineMiles(lat1, lon1, lat2, lon2){
-  const dLat = deg2rad(lat2-lat1);
-  const dLon = deg2rad(lon2-lon1);
-  const a =
-    Math.sin(dLat/2)**2 +
-    Math.cos(deg2rad(lat1)) *
-    Math.cos(deg2rad(lat2)) *
-    Math.sin(dLon/2)**2;
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  return EARTH_RADIUS_MI * c;
-}
-
-/* Parse lat/lon */
-function parseLatLon(str){
-  if(!str) return null;
-  const m = str.trim().match(/(-?\d+(\.\d+)?)\s*,\s*(-?\d+(\.\d+)?)/);
-  if(!m) return null;
-  return { lat: parseFloat(m[1]), lon: parseFloat(m[3]) };
-}
-
-/* Sincronizar overlays */
-function syncOverlays(){
-  folioOverlay.textContent = folioInput.value || "";
-  stateCodeOverlay.textContent = stateCodeInput.value || "";
-  customerNameOverlay.textContent = customerInput.value || "";
-  rigNameOverlay.textContent = rigInput.value || "";
-  wellNameOverlay.textContent = wellInput.value || "";
-  parishOverlay.textContent = parishInput.value || "";
-
-  dateOverlay.textContent = dateInput.value ? formatDateMDY(dateInput.value) : "";
-  techOverlay.textContent = techInput.value || "";
-
-  // texto limpio del servicio
-   let srvLabel = "";
-  const opt = serviceSelect.options[serviceSelect.selectedIndex];
-
-  // solo mostrar si es un servicio REAL
-  if (opt && opt.value) {
-  srvLabel = opt.dataset.label || "";
-  }
-
-serviceTypeOverlay.textContent = srvLabel;
-
-
-  commentsOverlay.textContent = descInput.value || "";
-
-  // Lógica W/C vs N/C
-    const hasService =
-  serviceSelect.value && serviceSelect.value !== "";
-
-if (!hasService) {
-  wcOverlay.textContent = "";
-} else {
-  const wcRaw = (wcInput.value || "").trim().toUpperCase();
-  if (!wcRaw || wcRaw === "N/C" || wcRaw === "NC") {
-    wcOverlay.textContent = "N/C";
-  } else {
-    wcOverlay.textContent = `W/C - $${wcInput.value}`;
+    parishInput.value = county;
+    const st = stateToCode(state);
+    stateCodeInput.value = st || "";
+    return true;
+  }catch(e){
+    console.error(e);
+    if(!silent) alert("Could not resolve address (county/state) from coordinates.");
+    return false;
   }
 }
 
+// Apply coords -> fill workAddr + reverse-geocode + RT + overlays
+async function applyWorkCoords(lat, lon, { doGeocode=true, silent=false } = {}){
+  const clat = clamp(lat, -90, 90);
+  const clon = clamp(lon, -180, 180);
 
-  aOverlay.textContent  = aInput.value ? `A- ${timeToHHMM(aInput.value)}` : "";
-  dOverlay.textContent  = dInput.value ? `D- ${timeToHHMM(dInput.value)}` : "";
-  rtOverlay.textContent = rtManual.value ? `R/T- ${rtManual.value} MILES` : "";
-}
+  workAddr.value = `${clat.toFixed(6)}, ${clon.toFixed(6)}`;
 
-/* Calcular R/T */
-function computeAndMaybeSetRT(changedByWorkAddr=false){
-  const work = parseLatLon(workAddr.value);
-  if(!work) return;
-
-  const hq = parseLatLon(hqAddr.value);
-  if(!hq) return;
-
-  const milesOneWay = haversineMiles(hq.lat, hq.lon, work.lat, work.lon);
-  const ROAD_FACTOR = 1.4;
-  const milesRT = Math.round(milesOneWay * ROAD_FACTOR * 2);
-
-  if (changedByWorkAddr) {
-    rtManual.dataset.autofilled = "true";
+  if(doGeocode){
+    await reverseGeocodeAndFill(clat, clon, { silent });
   }
 
-  if (rtManual.dataset.autofilled !== "false") {
-    rtManual.value = String(milesRT);
-    syncOverlays();
-  }
-}
-
-/* Eventos blur para actualizar */
-[
-  folioInput, stateCodeInput, customerInput, rigInput, wellInput, parishInput,
-  dateInput, techInput, predComment, descInput,
-  wcInput, aInput, dInput, rtManual, workAddr, hqAddr
-].forEach(el => el.addEventListener("blur", () => {
-
-  if (el === workAddr) computeAndMaybeSetRT(true);
-  if (el === hqAddr) computeAndMaybeSetRT(true);
-
+  computeAndMaybeSetRT(true);
   syncOverlays();
-}));
+  if (typeof window.pushToJSA === "function") window.pushToJSA();
+}
 
-/* Obtener ubicación */
-/* Obtener ubicación (FIX iOS compatible) */
+// GPS button
 locBtn.addEventListener("click", () => {
-
-  if (!("geolocation" in navigator)) {
-    alert("GPS not supported on this device.");
-    return;
-  }
+  if (!("geolocation" in navigator)) { alert("GPS not supported on this device."); return; }
 
   navigator.geolocation.getCurrentPosition(
     async (pos) => {
-
       const lat = pos.coords.latitude;
       const lon = pos.coords.longitude;
-
-      try {
-        const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&addressdetails=1`;
-        const resp = await fetch(url);
-        const data = await resp.json();
-
-        const addr = data.address || {};
-        const state = addr.state || "";
-        const county = addr.county || addr.municipality || addr.region || "";
-
-        workAddr.value = `${lat.toFixed(6)}, ${lon.toFixed(6)}`;
-        parishInput.value = county;
-        stateCodeInput.value = stateToCode(state) || state;
-
-        computeAndMaybeSetRT();
-        syncOverlays();
-
-      } catch (e) {
-        console.error(e);
-        alert("Could not resolve address from GPS.");
-      }
-
+      await applyWorkCoords(lat, lon, { doGeocode:true, silent:false });
     },
-    (err) => {
-      alert("GPS error: " + err.message);
-    },
-    {
-      enableHighAccuracy: false, // CLAVE para iOS
-      timeout: 15000,
-      maximumAge: 0
-    }
+    (err) => { alert("GPS error: " + err.message); },
+    { enableHighAccuracy: false, timeout: 15000, maximumAge: 0 }
   );
+});
+  
+
+// Manual coordinates: auto-apply on paste, Enter, or after user stops typing
+let manualTimer = null;
+
+async function tryApplyManualCoords({ silent=false } = {}){
+  const raw = (manualCoord.value || "").trim();
+  if(!raw) return;
+
+  const ok = await setWorkAddrFromFlexible(raw, { silent });
+  if(!ok && !silent){
+    alert(
+      "Could not parse coordinates.\n\nExamples:\n" +
+      "32.123456, -103.123456\n" +
+      "32°42'03.4\"N 103°08'57.0\"W\n" +
+      "LATITUDE: 32° 9'57.06\"N  LONGITUDE: 103°29'11.46\"W"
+    );
+  }
+}
+
+// Enter = apply immediately
+manualCoord?.addEventListener("keydown", (e) => {
+  if(e.key === "Enter"){
+    e.preventDefault();
+    tryApplyManualCoords({ silent:false });
+  }
+});
+
+// Paste = apply immediately (silent)
+manualCoord?.addEventListener("paste", () => {
+  setTimeout(() => tryApplyManualCoords({ silent:true }), 0);
+});
+
+// Typing = debounce (no spam a Nominatim)
+manualCoord?.addEventListener("input", () => {
+  clearTimeout(manualTimer);
+  manualTimer = setTimeout(() => {
+    tryApplyManualCoords({ silent:true });
+  }, 700);
+});
+
+// Blur = apply (with alert if invalid)
+manualCoord?.addEventListener("blur", () => {
+  tryApplyManualCoords({ silent:false });
 });
 
 
-/* Botón: generar texto estilo Trello/Calendar */
-fillBtn.addEventListener("click", () => {
 
-  const opt = serviceSelect.options[serviceSelect.selectedIndex];
-  const service = opt ? (opt.dataset.label || opt.textContent) : "";
+  fillBtn.addEventListener("click", () => {
+    const opt = serviceSelect.options[serviceSelect.selectedIndex];
+    const service = opt ? (opt.dataset.label || opt.textContent) : "";
+    const desc    = descInput.value || "";
+    const jobDesc = `${service} ${desc}`.trim();
 
-  const desc    = descInput.value || "";
-  const jobDesc = `${service} ${desc}`.trim();
+    const state = stateCodeInput.value || "";
+    const folio = folioInput.value || "";
+    const dateMDY = dateInput.value ? formatDateMDY(dateInput.value) : "";
 
-  const state = stateCodeInput.value || "";
-  const folio = folioInput.value || "";
-  const dateMDY = dateInput.value ? formatDateMDY(dateInput.value) : "";
+    const wcRaw = (wcInput.value || "").trim().toUpperCase();
+    const cost = (!wcRaw || wcRaw === "N/C" || wcRaw === "NC")
+      ? "N/C"
+      : `W/C - $${wcInput.value}`;
 
-  // misma lógica que overlay: N/C puro o W/C-$
-  const wcRaw = (wcInput.value || "").trim().toUpperCase();
-  const cost = (!wcRaw || wcRaw === "N/C" || wcRaw === "NC")
-    ? "N/C"
-    : `W/C - $${wcInput.value}`;
+    const aTime = aInput.value ? `A- ${timeToHHMM(aInput.value)}` : "";
+    const dTime = dInput.value ? `D- ${timeToHHMM(dInput.value)}` : "";
+    const rt    = rtManual.value ? `R/T- ${rtManual.value} MILES` : "";
+    const tech  = techInput.value || "";
 
-  const aTime = aInput.value ? `A- ${timeToHHMM(aInput.value)}` : "";
-  const dTime = dInput.value ? `D- ${timeToHHMM(dInput.value)}` : "";
-  const rt    = rtManual.value ? `R/T- ${rtManual.value} MILES` : "";
-  const tech  = techInput.value || "";
-
-  const block =
+    const block =
 `${jobDesc}
 ${state}-${folio}
 ${dateMDY}
@@ -789,25 +1312,21 @@ ${dTime}
 ${rt}
 ${tech}`.trim();
 
-  document.getElementById("trelloText").value = block;
-  document.getElementById("trelloModal").style.display = "block";
-});
+    document.getElementById("trelloText").value = block;
+    document.getElementById("trelloModal").style.display = "block";
+  });
 
-/* Copiar texto */
-document.getElementById("copyTrello").addEventListener("click", () => {
-  const txt = document.getElementById("trelloText");
-  txt.select();
-  document.execCommand("copy");
-});
+  document.getElementById("copyTrello").addEventListener("click", () => {
+    const txt = document.getElementById("trelloText");
+    txt.select();
+    document.execCommand("copy");
+  });
 
-/* Cerrar modal */
-document.getElementById("closeModal").addEventListener("click", () => {
-  document.getElementById("trelloModal").style.display = "none";
-});
+  document.getElementById("closeModal").addEventListener("click", () => {
+    document.getElementById("trelloModal").style.display = "none";
+  });
 
-/* PDF */
-generatePDF.addEventListener("click", async () => {
-
+       async function generateTicketPdfBlob(){
   syncOverlays();
 
   const state  = stateCodeInput.value.trim().toUpperCase();
@@ -819,148 +1338,935 @@ generatePDF.addEventListener("click", async () => {
   let desc     = descInput.value.trim().split(/\s+/).slice(0,3).join(" ");
 
   let wcStatus = "NC";
-  if (wcInput.value.trim() !== "" && wcInput.value.trim().toUpperCase() !== "N/C") {
-    wcStatus = "WC";
-  }
+  if (wcInput.value.trim() !== "" && wcInput.value.trim().toUpperCase() !== "N/C") wcStatus = "WC";
 
-  const fileName =
-    `${state}-${folio} ${cust} ${well} ${srv} ${desc} ${wcStatus}`.toUpperCase();
+  const fileName = `${state}-${folio} ${cust} ${well} ${srv} ${desc} ${wcStatus}`.toUpperCase();
 
   const area = document.getElementById("ticketCanvas");
-
-  /* ===== FIX iOS: CORTAR OVERFLOW REAL ===== */
-area.style.overflow = "hidden";
-
-  /* ===== FORZAR SCROLL TOP (Safari bug) ===== */
+  area.style.overflow = "hidden";
   area.scrollTop = 0;
   area.scrollLeft = 0;
 
-  /* ===== SCALE ADAPTATIVO ===== */
-  const scale = /iPhone|iPad|iPod/i.test(navigator.userAgent) ? 1 : 2;
+  const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const scale = isIOS ? 1 : 2;
 
-  //FIX SAFARI: asegurar que el modal NO existe al renderizar
   document.getElementById("trelloModal").style.display = "none";
-  
-  
+
   const rect = area.getBoundingClientRect();
-
-const canvas = await html2canvas(area, {
-  scale,
-  useCORS: true,
-  backgroundColor: "#ffffff",
-  width: rect.width,
-  height: rect.height
-});
-
+  const canvas = await html2canvas(area, {
+    scale,
+    useCORS: true,
+    backgroundColor: "#ffffff",
+    width: rect.width,
+    height: rect.height
+  });
 
   const img = canvas.toDataURL("image/jpeg", 0.85);
 
-
   const { jsPDF } = window.jspdf;
-  const pdf = new jsPDF({
-  orientation: "portrait",
-  unit: "pt",
-  format: "a4"
+  const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
+  pdf.addImage(img, "JPEG", 0, 0, 595.28, 841.89);
+
+  return { blob: pdf.output("blob"), fileName };
+}
+
+function downloadBlob(blob, fileNameNoExt){
+  const url = URL.createObjectURL(blob);
+  const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+  if(isIOS){
+    window.location.href = url;
+  } else {
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${fileNameNoExt}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+
+// Botón verde Project1: sigue funcionando normal (solo Ticket)
+generatePDF.addEventListener("click", async () => {
+  try{
+    const { blob, fileName } = await generateTicketPdfBlob();
+    downloadBlob(blob, fileName);
+  }catch(err){
+    alert("TICKET PDF ERROR: " + (err?.message || err));
+    console.error(err);
+  }
 });
 
-const pdfWidth = 595.28;
-const pdfHeight = 841.89;
 
-pdf.addImage(img, "JPEG", 0, 0, pdfWidth, pdfHeight);
+  document.getElementById("copyTitle").addEventListener("click", () => {
+    const state  = stateCodeInput.value.trim().toUpperCase();
+    const folio  = folioInput.value.trim();
+    const cust   = customerInput.value.trim().replace(/\s+/g," ");
+    const well   = wellInput.value.trim().replace(/\s+/g," ");
+
+    const srvOpt = serviceSelect.options[serviceSelect.selectedIndex];
+    const srv    = srvOpt ? (srvOpt.dataset.label || srvOpt.textContent) : "";
+
+    let desc     = descInput.value.trim().split(/\s+/).slice(0,3).join(" ");
+
+    let wcStatus = "NC";
+    if (wcInput.value.trim() !== "" && wcInput.value.trim().toUpperCase() !== "N/C") wcStatus = "WC";
+
+    const title = `${state}-${folio} ${cust} ${well} ${srv} ${desc} ${wcStatus}`.toUpperCase();
+
+    navigator.clipboard.writeText(title)
+      .then(() => alert("TITLE COPIED:\n" + title))
+      .catch(() => {
+        const temp = document.createElement("textarea");
+        temp.value = title;
+        document.body.appendChild(temp);
+        temp.select();
+        document.execCommand("copy");
+        document.body.removeChild(temp);
+        alert("TITLE COPIED:\n" + title);
+      });
+  });
+
+
+
+function pushToJSA(){
+  // WELL NAME -> WELL / SITE
+  if (jsaSiteInput) {
+    jsaSiteInput.value = (wellInput.value || "").toUpperCase();
+    jsaSiteInput.dispatchEvent(new Event("input", { bubbles:true }));
+    jsaSiteInput.dispatchEvent(new Event("change", { bubbles:true }));
+  }
+
+  // DATE -> DATE
+  if (jsaDateInput) {
+    jsaDateInput.value = dateInput.value || "";
+    jsaDateInput.dispatchEvent(new Event("input", { bubbles:true }));
+    jsaDateInput.dispatchEvent(new Event("change", { bubbles:true }));
+  }
+
+  // TECHNICIAN -> TASK LEADER - NAME
+  if (jsaLeaderName) {
+    jsaLeaderName.value = (techInput.value || "").toUpperCase();
+    jsaLeaderName.dispatchEvent(new Event("input", { bubbles:true }));
+    jsaLeaderName.dispatchEvent(new Event("change", { bubbles:true }));
+  }
+
+  // TECHNICIAN -> WORK TEAM NAMES (modo autofill)
+if (jsaTeamNames) {
+  const tech = (techInput.value || "").toUpperCase().trim();
+  const current = (jsaTeamNames.value || "").trim();
+
+  // Si aún no se ha tocado manualmente, o estaba vacío, mantenlo sincronizado
+  const isAuto = (jsaTeamNames.dataset.autofill === "true");
+
+  if (( !current || isAuto ) && tech) {
+    jsaTeamNames.value = tech;
+    jsaTeamNames.dataset.autofill = "true";
+    jsaTeamNames.dispatchEvent(new Event("input", { bubbles:true }));
+    jsaTeamNames.dispatchEvent(new Event("change", { bubbles:true }));
+  }
+}
+         // SERVICE TYPE (Form1) -> SERVICE TYPE (REFERENCE) (Form2)
+  if (jsaServiceSelect) {
+    const srcCode = (serviceSelect.value || "").toUpperCase().trim();
+    const mapped = mapServiceToJSA(srcCode);
+
+    if (mapped) {
+      jsaServiceSelect.value = mapped;
+      jsaServiceSelect.dispatchEvent(new Event("input",  { bubbles:true }));
+      jsaServiceSelect.dispatchEvent(new Event("change", { bubbles:true }));
+      
+    }
+  }
+
+
+}
+window.pushToJSA = pushToJSA; // <-- AGREGA ESTA LÍNEA
+
+// listeners
+wellInput.addEventListener("input", pushToJSA);
+wellInput.addEventListener("blur", pushToJSA);
+
+
+dateInput.addEventListener("change", pushToJSA);
+dateInput.addEventListener("blur", pushToJSA);
+
+techInput.addEventListener("input", pushToJSA);
+techInput.addEventListener("blur", pushToJSA);
+
+window.addEventListener("DOMContentLoaded", pushToJSA);
+
+
+})();
+</script>
+
+<script>
+/* ============================================================
+   PROJECT 2 JS (renombrado + encapsulado)
+   ============================================================ */
+(function(){
+  // DEBUG opcional
+  window.addEventListener("error", (e) => { console.warn("JSA JS ERROR:", e?.message || e); });
+  window.addEventListener("unhandledrejection", (e) => { console.warn("JSA PROMISE ERROR:", e?.reason || e); });
+
+  const SERVICES = [
+    { groupLabel: "--OFFICE TRAILER--", items: [
+      { code:"OFC_RIG_UP",   label:"RIG UP - OFFICE TRAILER" },
+      { code:"OFC_RIG_DOWN", label:"RIG DOWN - OFFICE TRAILER" },
+    ]},
+    { groupLabel: "--GENERATOR--", items: [
+      { code:"GEN_RIG_UP",   label:"RIG UP - GENERATOR" },
+      { code:"GEN_RIG_DOWN", label:"RIG DOWN - GENERATOR" },
+    ]},
+    { groupLabel: "--TOWER--", items: [
+      { code:"TWR_RIG_UP",   label:"RIG UP - TOWER" },
+      { code:"TWR_RIG_DOWN", label:"RIG DOWN - TOWER" },
+    ]},
+    { groupLabel: "--RIGS--", items: [
+      { code:"RIG_RIG_UP",   label:"RIG UP - RIGS" },
+      { code:"RIG_RIG_DOWN", label:"RIG DOWN - RIGS" },
+    ]},
+        { groupLabel: "--GENERAL--", items: [
+      { code:"SITE_CHECK_NET",      label:"SITE CHECK - NET, HIBOOST, STARLINK" },
+      { code:"SITE_CHECK_DIRECTV",  label:"SITE CHECK - DIRECTV" },
+      { code:"SITE_CHECK_GENERATOR",label:"SITE CHECK - GENERATOR" },
+      { code:"SITE_CHECK_TOWER", label:"SITE CHECK - TOWER" },
+   ]},
+
+  ];
+
+  // === TEMPLATES (igual que tu proyecto 2) ===
+  const SERVICE_TEMPLATES = window.SERVICE_TEMPLATES_JSA || {
+    "OFC_RIG_UP": {
+      ppePreset: "TRAILER",
+      task: "RIG UP - OFFICE TRAILER (SET WATER & POWER, INSTALL/VERIFY STARLINK & DIRECTV, SITE READY)",
+      injury: "FALL / ELECTRICAL SHOCK / STRUCK-BY / HAND INJURY",
+      steps: [
+        ["1","POSITION TRAILER; UNHITCH SAFE","VEH COLLISION / STRUCK-BY / ROLL-AWAY","SPOTTER PRN; CHOCKS; CONES; LEVEL; CLEAR PATHS","TECH","N"],
+        ["2","DEPLOY STABILIZER JACKS; LEVEL","PINCH / CRUSH / MUSCLE STRAIN","GLOVES; HANDS CLEAR; USE HANDLE/TOOL; SLOW, CONTROLLED","TECH","N"],
+        ["3","SET LADDER (≤8 STEPS); VERIFY","FALL / SLIP / PINCH","INSPECT FEET/RUNGS; FIRM BASE; 4:1 ANGLE; 3-PT","TECH","N"],
+        ["4","RAISE/SET MAST; CHECK HARDWARE","FALL / STRUCK-BY (MOVING PARTS)","KEEP BODY INBOARD; NO OVERREACH; VERIFY LOCKS/PINS","TECH","N"],
+        ["5","MOUNT/POINT STARLINK; ROUTE CBL","FALL / TOOL DROP / PINCH","TOOL CONTROL; SECURE CABLE; NO OVERREACH; 3-PT","TECH","N"],
+        ["6","MOUNT/PEAK DIRECTV; SECURE CBL","FALL / TOOL DROP / PINCH","TOOL CONTROL; SECURE COAX; NO OVERREACH; 3-PT","TECH","N"],
+        ["7","CONNECT WATER HOSES; CHECK LEAK","SLIP / WHIP / SPLASH","DEPRESSURIZE; DRAIN CONTROL; EYE/GLOVES; KEEP AREA DRY","TECH","N"],
+        ["8","TEMP GROUND (TRLR/GEN); VERIFY","HAND INJ (HAMMER) / STRUCK","EYE/GLOVES; SAFE SWING; CLEAR RADIUS; SET ROD STRAIGHT","TECH","N"],
+        ["9","SET ENTRY STAIRS/LADDER; SECURE","PINCH / STRAIN / TRIP","CONTROL LOAD; 2-PER PRN; LOCK/STRAP; VERIFY STABILITY","TECH","N"],
+        ["10","CONNECT POWER FEED; VERIFY V","ELECTRICAL SHOCK / ARC","INSPECT CORD/ENDS; DRY HANDS; GFCI/BRKR OK; GLOVES","TECH","N"],
+        ["11","HOUSEKEEP; CABLE MGMT; WALKDOWN","TRIP / STRUCK-AGAINST","ROUTE CABLES; TAPE/PROTECT; CLEAR PATHS; FINAL WALKDOWN","TECH","N"],
+      ]
+    },
+
+    "OFC_RIG_DOWN": {
+      ppePreset: "TRAILER",
+      task: "RIG DOWN - OFFICE TRAILER (DISCONNECT POWER/WATER, REMOVE STARLINK/DIRECTV, SECURE FOR TRANSPORT)",
+      injury: "FALL / ELECTRICAL SHOCK / STRUCK-BY / HAND INJURY",
+      steps: [
+        ["1","DISCONNECT POWER FEED; VERIFY OFF","ELECTRICAL SHOCK / ARC","OPEN BREAKER; TEST/VERIFY; DRY HANDS; COIL/STORE CORD","TECH","N"],
+        ["2","REMOVE ENTRY STAIRS/LADDER; STOW","PINCH / STRAIN / TRIP","CONTROL LOAD; 2-PER PRN; KEEP FINGERS CLEAR; STRAP DOWN","TECH","N"],
+        ["3","DISCONNECT WATER; DRAIN/ CAP HOSE","SLIP / SPLASH / WHIP","DEPRESSURIZE; DRAIN CONTROL; CAP ENDS; KEEP AREA DRY","TECH","N"],
+        ["4","SET LADDER (≤8 STEPS); VERIFY","FALL / SLIP / PINCH","INSPECT FEET/RUNGS; FIRM BASE; 4:1 ANGLE; 3-PT","TECH","N"],
+        ["5","REMOVE DIRECTV; COIL/SECURE COAX","FALL / TOOL DROP / PINCH","TOOL CONTROL; NO OVERREACH; SECURE HARDWARE; 3-PT","TECH","N"],
+        ["6","REMOVE STARLINK; COIL/SECURE CBL","FALL / TOOL DROP / PINCH","TOOL CONTROL; NO OVERREACH; SECURE HARDWARE; 3-PT","TECH","N"],
+        ["7","LOWER/SECURE MAST; INSTALL LOCKS","FALL / STRUCK-BY (MOVING PARTS)","CONTROL DESCENT; KEEP CLEAR ZONE; VERIFY PINS/LOCKS","TECH","N"],
+        ["8","RETRACT STABILIZER JACKS; STOW","PINCH / CRUSH","GLOVES; HANDS CLEAR; USE HANDLE/TOOL; VERIFY FULL RETRACT","TECH","N"],
+        ["9","REMOVE TEMP GROUND; BACKFILL HOLE","HAND INJ (HAMMER) / STRUCK","EYE/GLOVES; SAFE SWING; PULL STRAIGHT; STORE ROD/CLAMP","TECH","N"],
+        ["10","HITCH TRAILER; CHECK LIGHTS/CHAINS","VEH COLLISION / STRUCK-BY","SPOTTER PRN; CHOCKS; PIN/LOCK; CHAINS; LIGHT CHECK","TECH","N"],
+      ]
+    },
+
+    "GEN_RIG_UP": {
+      ppePreset: "GEN",
+      task: "RIG UP - GENERATOR (POSITION, STABILIZE, GROUND, CONNECT POWER/WATER)",
+      injury: "ELECTRICAL SHOCK / FIRE / STRUCK-BY / HAND INJURY",
+      steps: [
+        ["1","POSITION GEN; UNHITCH; SET CHOCKS","VEH COLLISION / STRUCK-BY / ROLL-AWAY","SPOTTER PRN; CONES; CHOCKS; LEVEL; CLEAR EXHAUST AREA","TECH","N"],
+        ["2","DEPLOY GEN JACKS; LEVEL UNIT","PINCH / CRUSH / STRAIN","GLOVES; HANDS CLEAR; USE HANDLE/TOOL; SLOW, CONTROLLED","TECH","N"],
+        ["3","CONNECT WATER HOSES; VERIFY FLOW","SLIP / WHIP / SPLASH","DEPRESSURIZE; DRAIN CONTROL; EYE/GLOVES; SECURE FITTINGS","TECH","N"],
+        ["4","TEMP GROUND GEN; VERIFY CLAMP","HAND INJ (HAMMER) / STRUCK","EYE/GLOVES; SAFE SWING; CLEAR RADIUS; TIGHTEN CLAMP","TECH","N"],
+        ["5","CONNECT POWER FEED; CHECK LOAD","ELECTRICAL SHOCK / FIRE","INSPECT CORD/PLUG; DRY HANDS; BREAKER OFF-ON; MONITOR LOAD","TECH","N"],
+      ]
+    },
+
+    "GEN_RIG_DOWN": {
+      ppePreset: "GEN",
+      task: "RIG DOWN - GENERATOR (DISCONNECT, REMOVE GROUND/WATER, SECURE, HITCH)",
+      injury: "ELECTRICAL SHOCK / FIRE / STRUCK-BY / HAND INJURY",
+      steps: [
+        ["1","DISCONNECT POWER FEED; VERIFY OFF","ELECTRICAL SHOCK / ARC","OPEN BREAKER; TEST/VERIFY; DRY HANDS; COIL/STORE CORD","TECH","N"],
+        ["2","DISCONNECT WATER; DRAIN/SECURE HOSE","SLIP / SPLASH / WHIP","DEPRESSURIZE; DRAIN CONTROL; CAP ENDS; KEEP AREA DRY","TECH","N"],
+        ["3","RETRACT GEN JACKS; STOW HANDLE","PINCH / CRUSH","GLOVES; HANDS CLEAR; USE HANDLE/TOOL; VERIFY FULL RETRACT","TECH","N"],
+        ["4","REMOVE TEMP GROUND; STORE ROD/CLAMP","HAND INJ (HAMMER) / STRUCK","EYE/GLOVES; SAFE SWING; PULL STRAIGHT; STORE SECURE","TECH","N"],
+        ["5","HITCH GEN; CHAINS; LIGHT CHECK","VEH COLLISION / STRUCK-BY","SPOTTER PRN; CHOCKS; PIN/LOCK; CHAINS; LIGHT CHECK","TECH","N"],
+      ]
+    },
+
+    "TWR_RIG_UP": {
+      ppePreset: "TOWER",
+      task: "RIG UP - TOWER (POSITION, STABILIZE, CONNECT POWER, TILT UP/EXTEND, INSTALL/VERIFY CAMERAS)",
+      injury: "FALL / STRUCK-BY / CRUSH / ELECTRICAL SHOCK",
+      steps: [
+        ["1","POSITION TOWER; UNHITCH; SET CHOCKS","VEH COLLISION / STRUCK-BY / ROLL-AWAY","SPOTTER PRN; CONES; CHOCKS; LEVEL; CLEAR SWING/WORK ZONE","TECH","N"],
+        ["2","DEPLOY OUTRIGGERS/JACKS; LEVEL","PINCH / CRUSH / STRAIN","GLOVES; HANDS CLEAR; KEEP FEET CLEAR; VERIFY LEVEL INDICATOR","TECH","N"],
+        ["3","REMOVE LOCKS/CHAINS; STOW HARDWARE","PINCH / HAND INJ","GLOVES; CONTROL HARDWARE; KEEP FACE CLEAR; STORE IN BIN","TECH","N"],
+        ["4","SET LADDER (≤8 STEPS); VERIFY","FALL / SLIP / PINCH","INSPECT FEET/RUNGS; FIRM BASE; 4:1 ANGLE; 3-PT","TECH","N"],
+        ["5","INSTALL/VERIFY CAMERAS; CHECK VIEW","FALL / TOOL DROP","TOOL CONTROL; NO OVERREACH; SECURE CAMERA/BRACKET; 3-PT","TECH","N"],
+        ["6","TEMP GROUND (TRLR/GEN); VERIFY","HAND INJ (HAMMER) / STRUCK","EYE/GLOVES; SAFE SWING; CLEAR RADIUS; TIGHTEN CLAMP","TECH","N"],
+        ["7","CONNECT POWER TO TOWER; VERIFY V","ELECTRICAL SHOCK / ARC","INSPECT CORD/ENDS; DRY HANDS; BREAKER OFF-ON; GLOVES","TECH","N"],
+        ["8","TILT UP USING CTRL; ESTABLISH ZONE","CRUSH / STRUCK-BY / ELEC","EXCLUSION ZONE; WATCH CABLES; CLEAR MOVING PARTS; SPOTTER PRN","TECH","N"],
+        ["9","EXTEND SECTIONS; WATCH SNAGS","ENTANGLEMENT / ELEC / STRUCK","CHECK ROUTING; HANDS CLEAR; STOP IF SNAG; CONTROL SPEED","TECH","N"],
+      ]
+    },
+
+    "TWR_RIG_DOWN": {
+      ppePreset: "TOWER",
+      task: "RIG DOWN - TOWER (RETRACT, TILT DOWN, DISCONNECT POWER, REMOVE CAMERAS, SECURE/HITCH)",
+      injury: "FALL / STRUCK-BY / CRUSH / ELECTRICAL SHOCK",
+      steps: [
+        ["1","RETRACT SECTIONS; WATCH SNAGS","ENTANGLEMENT / ELEC / STRUCK","CHECK ROUTING; HANDS CLEAR; STOP IF SNAG; CONTROL SPEED","TECH","N"],
+        ["2","TILT DOWN USING CTRL; ESTABLISH ZONE","CRUSH / STRUCK-BY / ELEC","EXCLUSION ZONE; WATCH CABLES; CLEAR MOVING PARTS; SPOTTER PRN","TECH","N"],
+        ["3","DISCONNECT POWER; VERIFY OFF","ELECTRICAL SHOCK / ARC","OPEN BREAKER; TEST/VERIFY; DRY HANDS; COIL/STORE CORD","TECH","N"],
+        ["4","SET LADDER (≤8 STEPS); VERIFY","FALL / SLIP / PINCH","INSPECT FEET/RUNGS; FIRM BASE; 4:1 ANGLE; 3-PT","TECH","N"],
+        ["5","REMOVE CAMERAS; STORE; CHECK DAMAGE","FALL / TOOL DROP","TOOL CONTROL; NO OVERREACH; SECURE HARDWARE; 3-PT","TECH","N"],
+        ["6","RETRACT OUTRIGGERS/JACKS; STOW","PINCH / CRUSH","GLOVES; HANDS CLEAR; USE HANDLE/TOOL; VERIFY FULL RETRACT","TECH","N"],
+        ["7","REMOVE TEMP GROUND; STORE ROD/CLAMP","HAND INJ (HAMMER) / STRUCK","EYE/GLOVES; SAFE SWING; PULL STRAIGHT; STORE SECURE","TECH","N"],
+        ["8","HITCH TOWER; CHAINS; LIGHT CHECK","VEH COLLISION / STRUCK-BY","SPOTTER PRN; CHOCKS; PIN/LOCK; CHAINS; LIGHT CHECK","TECH","N"],
+      ]
+    },
+
+    "RIG_RIG_UP": {
+      ppePreset: "RIGS",
+      task: "RIG UP - RIGS (SET MASTS/CABLES, SECURE EQUIPMENT, VERIFY INSTALLATION)",
+      injury: "FALL / CUTS / HAND INJURY / STRUCK-BY",
+      steps: [
+        ["1","SET LADDER (≤8 STEPS); VERIFY","FALL / SLIP / PINCH","INSPECT FEET/RUNGS; FIRM BASE; 4:1 ANGLE; 3-PT","TECH","N"],
+        ["2","CUT TIES/STRAPS; REMOVE PACKAGING","CUT / LACERATION","CUT AWAY FROM BODY; CUT GLOVES; CONTROL BLADE; DISPOSE SAFE","TECH","N"],
+        ["3","RAISE/SET MAST; CHECK HARDWARE","FALL / STRUCK-BY (MOVING PARTS)","KEEP BODY INBOARD; NO OVERREACH; VERIFY LOCKS/PINS","TECH","N"],
+        ["4","SECURE MAST (DRILL/DRIVER); VERIFY","FALL / HAND INJ","3-PT; TOOL LANYARD; CORRECT BIT; DO NOT OVER-TORQUE","TECH","N"],
+      ]
+    },
+
+    "RIG_RIG_DOWN": {
+      ppePreset: "RIGS",
+      task: "RIG DOWN - RIGS (LOWER MASTS, SECURE CABLES, INSTALL TIES/STRAPS, PACK UP)",
+      injury: "FALL / CUTS / HAND INJURY / STRUCK-BY",
+      steps: [
+        ["1","SET LADDER (≤8 STEPS); VERIFY","FALL / SLIP / PINCH","INSPECT FEET/RUNGS; FIRM BASE; 4:1 ANGLE; 3-PT","TECH","N"],
+        ["2","LOWER/SECURE MAST; CONTROL DESCENT","FALL / STRUCK-BY","CONTROL DESCENT; CLEAR DROP ZONE; VERIFY LOCKS/PINS","TECH","N"],
+        ["3","SECURE MAST (DRILL/DRIVER); VERIFY","FALL / HAND INJ","3-PT; TOOL LANYARD; CORRECT BIT; DO NOT OVER-TORQUE","TECH","N"],
+        ["4","SECURE CABLES; INSTALL TIES/STRAPS","CUT / LACERATION / TRIP","CUT GLOVES; ROUTE CLEAN; TAPE/PROTECT; KEEP WALKWAYS CLEAR","TECH","N"],
+      ]
+    },
+
+    "SITE_CHECK_NET": {
+      ppePreset: "RIGS",
+      task: "SITE CHECK - NET / HIBOOST / STARLINK (VISUAL INSPECTION, CONNECTIONS, AND POWER CHECK)",
+      injury: "FALL / ELECTRICAL SHOCK / HAND INJURY",
+      steps: [
+        ["1","SET LADDER (≤8 STEPS); VERIFY","FALL / SLIP / PINCH","INSPECT FEET/RUNGS; FIRM BASE; 4:1 ANGLE; 3-PT","TECH","N"],
+        ["2","VISUAL INSPECTION OF EQUIP/MAST","FALL / SLIP / STRUCK","VERIFY GROUND; NO OVERREACH; CHECK MOUNTING/CLAMPS/CABLE ROUTE","TECH","N"],
+        ["3","CHECK POWER/CONNECTIONS; NO DAMAGE","ELECTRICAL SHOCK","GLOVES; DRY HANDS; INSPECT CORDS/CONNECTORS; VERIFY TIGHT","TECH","N"],
+        ["4","USE HAND TOOLS FOR TIGHTEN/REPAIR","PINCH / CUT / IMPACT","GLOVES; INSPECT TOOLS; CORRECT TOOL; CONTROL HAND POSITION","TECH","N"],
+        ["5","USE TESTERS/PC; VERIFY SIGNAL/ALARM","ELECTRICAL SHOCK","CHECK LEADS/PROBES; SAFE TEST POINTS; KEEP CABLES CONTROLLED","TECH","N"],
+      ]
+    },
+
+    "SITE_CHECK_DIRECTV": {
+      ppePreset: "RIGS",
+      task: "SITE CHECK - DIRECTV (VISUAL INSPECTION, CONNECTIONS, AND POWER CHECK)",
+      injury: "FALL / ELECTRICAL SHOCK / HAND INJURY",
+      steps: [
+        ["1","SET LADDER (≤8 STEPS); VERIFY","FALL / SLIP / PINCH","INSPECT FEET/RUNGS; FIRM BASE; 4:1 ANGLE; 3-PT","TECH","N"],
+        ["2","VISUAL INSPECTION OF DISH/MAST","FALL / SLIP / STRUCK","VERIFY GROUND; NO OVERREACH; CHECK MOUNTING/BOLTS/COAX ROUTE","TECH","N"],
+        ["3","CHECK POWER/CONNECTIONS; NO DAMAGE","ELECTRICAL SHOCK","GLOVES; DRY HANDS; INSPECT CORDS/CONNECTORS; VERIFY TIGHT","TECH","N"],
+        ["4","USE HAND TOOLS FOR TIGHTEN/REPAIR","PINCH / CUT / IMPACT","GLOVES; INSPECT TOOLS; CORRECT TOOL; CONTROL HAND POSITION","TECH","N"],
+        ["5","USE METER/RECEIVER; VERIFY LEVELS","ELECTRICAL SHOCK","CHECK LEADS/PROBES; SAFE TEST POINTS; KEEP CABLES CONTROLLED","TECH","N"],
+      ]
+    },
+    "SITE_CHECK_GENERATOR": {
+     ppePreset: "GEN",
+     task: "SITE CHECK - GENERATOR (CHECK WATER PUMP, POWER OUTPUT, DIESEL LEVEL/LEAKS, AND GENERAL CONDITION)",
+     injury: "ELECTRICAL SHOCK / FIRE / STRUCK-BY / HAND INJURY",
+     steps: [
+     ["1","VISUAL INSPECTION AROUND UNIT","STRUCK-BY / PINCH / SLIP","KEEP CLEAR OF MOVING PARTS; HOUSEKEEP; CONES IF NEEDED","TECH","N"],
+     ["2","CHECK WATER PUMP/HOSES/FITTINGS","SLIP / SPLASH / WHIP","DEPRESSURIZE; EYE/GLOVES; VERIFY TIGHT FITTINGS","TECH","N"],
+     ["3","CHECK OUTPUT/LOAD INDICATIONS","ELECTRICAL SHOCK","DRY HANDS; DO NOT OPEN LIVE PANELS; USE METERS SAFELY","TECH","N"],
+     ["4","CHECK DIESEL LEVEL/LEAKS","FIRE / SLIP","NO SMOKING; CLEAN SPILLS; REPORT LEAKS","TECH","N"],
+  ]
+    },
+      "SITE_CHECK_TOWER": {
+  ppePreset: "TOWER",
+  task: "SITE CHECK - TOWER (VISUAL INSPECTION, POWER/CONTROL CHECK, STRUCTURE/OUTRIGGERS, LIGHTS/CAMERAS, CABLES)",
+  injury: "STRUCK-BY / CRUSH / ELECTRICAL SHOCK / FALL",
+  steps: [
+    ["1","ARRIVE; 360 WALKDOWN; SET SAFE ZONE","STRUCK-BY / VEH TRAFFIC / SLIP","PARK SAFE; CONES IF NEEDED; WATCH TRAFFIC; HOUSEKEEP","TECH","N"],
+    ["2","VISUAL CHECK: OUTRIGGERS/JACKS/LEVEL","PINCH / CRUSH / TRIP","KEEP HANDS CLEAR; CHECK PINS/LOCKS; DO NOT ADJUST IF UNSAFE","TECH","N"],
+    ["3","CHECK MAST/SECTIONS/CABLE ROUTE","STRUCK-BY / ENTANGLEMENT","KEEP CLEAR OF MOVING PARTS; VERIFY CABLES NOT SNAGGED; STOP IF DAMAGE","TECH","N"],
+    ["4","CHECK POWER FEED/PLUGS/BREAKERS","ELECTRICAL SHOCK / ARC","DRY HANDS; GLOVES; VISUAL ONLY ON LIVE; REPORT DAMAGED CORDS","TECH","N"],
+    ["5","CHECK CONTROLLER/MOTORS FUNCTION","CRUSH / PINCH","ESTABLISH EXCLUSION ZONE; TEST SHORT MOVES; HANDS CLEAR; SPOTTER PRN","TECH","N"],
+    ["6","VERIFY LIGHTS/CAMERAS/COMMS (IF APPL)","FALL / TOOL DROP / ELECTRICAL","LADDER ONLY IF REQUIRED; 3-PT; TOOL CONTROL; SAFE TEST POINTS","TECH","N"],
+    ["7","DOCUMENT FINDINGS; CLEANUP; CLOSEOUT","TRIP / STRAIN","CABLE MGMT; REMOVE TRIP HAZARDS; UPDATE NOTES; REPORT ISSUES","TECH","N"],
+  ]
+},
+
+
+  };
+
+  // DOM
+  const serviceSelect = document.getElementById("jsa_serviceSelect");
+  const companyInput = document.getElementById("jsa_companyInput");
+  const siteInput = document.getElementById("jsa_siteInput");
+  const dateInput = document.getElementById("jsa_dateInput");
+  const taskInput = document.getElementById("jsa_taskInput");
+  const injuryInput = document.getElementById("jsa_injuryInput");
+
+  const refReviewed = document.getElementById("jsa_refReviewed");
+  const refAttach = document.getElementById("jsa_refAttach");
+  const riskModify = document.getElementById("jsa_riskModify");
+  const riskRemains = document.getElementById("jsa_riskRemains");
+
+  const ppePreset = document.getElementById("jsa_ppePreset");
+  const ppeOther = document.getElementById("jsa_ppeOther");
+
+  const reviewerName = document.getElementById("jsa_reviewerName");
+  const reviewerCompany = document.getElementById("jsa_reviewerCompany");
+  const leaderName = document.getElementById("jsa_leaderName");
+  const leaderCompany = document.getElementById("jsa_leaderCompany");
+  const teamNames = document.getElementById("jsa_teamNames");
+  const completeSelect = document.getElementById("jsa_completeSelect");
+
+  const genPdfBtn = document.getElementById("jsa_genPdfBtn");
+  const genAllPdfBtn = document.getElementById("genAllPdfBtn");
+
+
+  const bg1 = document.getElementById("jsa_bg1");
+  const bg2 = document.getElementById("jsa_bg2");
+
+  const canvasP1 = document.getElementById("jsa_canvasP1");
+  const canvasP2 = document.getElementById("jsa_canvasP2");
+
+  const tabP1 = document.getElementById("jsa_tabP1");
+  const tabP2 = document.getElementById("jsa_tabP2");
+  const whichHint = document.getElementById("jsa_whichHint");
+
+       // === AUTO FILL REF ATTACH (HSE REFERENCES) ===
+const REF_MAP = {
+  "OFC_RIG_UP": "SOP – OFFICE TRAILER / LOTO / ELECTRICAL SAFETY / SITE RULES",
+  "OFC_RIG_DOWN": "SOP – OFFICE TRAILER / LOTO / ELECTRICAL SAFETY / SITE RULES",
+
+  "GEN_RIG_UP": "SOP – GENERATOR / LOTO / ELECTRICAL SAFETY / FIRE SAFETY",
+  "GEN_RIG_DOWN": "SOP – GENERATOR / LOTO / ELECTRICAL SAFETY / FIRE SAFETY",
+
+  "TWR_RIG_UP": "SOP – MOBILE COMM TOWER / LOTO / ELECTRICAL SAFETY / SITE RULES",
+  "TWR_RIG_DOWN": "SOP – MOBILE COMM TOWER / LOTO / ELECTRICAL SAFETY / SITE RULES",
+
+  "RIG_RIG_UP": "SOP – RIGS / HAND TOOLS / SITE RULES",
+  "RIG_RIG_DOWN": "SOP – RIGS / HAND TOOLS / SITE RULES",
+
+  "SITE_CHECK_NET": "SOP – NETWORK / ELECTRICAL SAFETY / SITE RULES",
+  "SITE_CHECK_DIRECTV": "SOP – DIRECTV / ELECTRICAL SAFETY / SITE RULES",
+  "SITE_CHECK_GENERATOR": "SOP – GENERATOR / ELECTRICAL SAFETY / FIRE SAFETY",
+  "SITE_CHECK_TOWER": "SOP – MOBILE COMM TOWER / LOTO / ELECTRICAL SAFETY / SITE RULES"
+};
+
+
+  const O = {
+    company: document.getElementById("jsa_ov_company"),
+    site: document.getElementById("jsa_ov_site"),
+    date: document.getElementById("jsa_ov_date"),
+    task: document.getElementById("jsa_ov_task"),
+    injury: document.getElementById("jsa_ov_injury"),
+    refYes: document.getElementById("jsa_ov_refYes"),
+    refNA: document.getElementById("jsa_ov_refNA"),
+    refAttach: document.getElementById("jsa_ov_refAttach"),
+    riskModifyYes: document.getElementById("jsa_ov_riskModify_yes"),
+    riskModifyNo:  document.getElementById("jsa_ov_riskModify_no"),
+    riskRemainsYes: document.getElementById("jsa_ov_riskRemains_yes"),
+    riskRemainsNo:  document.getElementById("jsa_ov_riskRemains_no"),
+    taskP2: document.getElementById("jsa_ov_taskP2"),
+    ppeOther: document.getElementById("jsa_ov_ppeOther"),
+    reviewerName: document.getElementById("jsa_ov_reviewerName"),
+    reviewerCompany: document.getElementById("jsa_ov_reviewerCompany"),
+    leaderName: document.getElementById("jsa_ov_leaderName"),
+    leaderCompany: document.getElementById("jsa_ov_leaderCompany"),
+    teamNames: document.getElementById("jsa_ov_teamNames"),
+    stepsBlock: document.getElementById("jsa_ov_stepsBlock"),
+    ppeHardHat: document.getElementById("jsa_ov_ppeHardHat"),
+    ppeGlasses: document.getElementById("jsa_ov_ppeGlasses"),
+    ppeShoes: document.getElementById("jsa_ov_ppeShoes"),
+    ppeGloves: document.getElementById("jsa_ov_ppeGloves"),
+    ppeOtherMark: document.getElementById("jsa_ov_ppeOtherMark"),
+    ppeOtherText: document.getElementById("jsa_ov_ppeOtherText")
+  };
+
+  // POS con IDs renombrados
+  let POS = {
+    jsa_ov_company: { left: 151, top: 193, fontSize: 9, width: 180 },
+    jsa_ov_site: { left: 391, top: 193, fontSize: 9, width: 240 },
+    jsa_ov_date: { left: 672, top: 193, fontSize: 11, width: 130 },
+
+    jsa_ov_task: { left: 185, top: 209, fontSize: 9, width: 660 },
+    jsa_ov_injury: { left: 373, top: 226, fontSize: 9, width: 480 },
+
+    jsa_ov_refYes: { left: 276, top: 274, fontSize: 16, width: 40, lineHeight: 1 },
+    jsa_ov_refNA: { left: 338, top: 275, fontSize: 16, width: 40, lineHeight: 1 },
+
+    jsa_ov_refAttach: { left: 212, top: 302, fontSize: 8, width: 145 },
+
+    jsa_ov_riskModify_yes: { left: 277, top: 343, fontSize: 16, width: 40, lineHeight: 1 },
+    jsa_ov_riskModify_no: { left: 339, top: 343, fontSize: 16, width: 40, lineHeight: 1 },
+
+    jsa_ov_riskRemains_yes: { left: 278, top: 382, fontSize: 16, width: 40, lineHeight: 1 },
+    jsa_ov_riskRemains_no: { left: 339, top: 383, fontSize: 16, width: 40, lineHeight: 1 },
+
+    jsa_ov_ppeOther: { left: 140, top: 733, fontSize: 9, width: 130 },
+
+    jsa_ov_reviewerName: { left: 473, top: 322, fontSize: 9, width: 130 },
+    jsa_ov_reviewerCompany: { left: 680, top: 322, fontSize: 9, width: 130 },
+
+    jsa_ov_leaderName: { left: 471, top: 485, fontSize: 9, width: 130 },
+    jsa_ov_leaderCompany: { left: 677, top: 485, fontSize: 9, width: 130 },
+
+    jsa_ov_teamNames: { left: 402, top: 555, fontSize: 9, width: 130, lineHeight: 1.35 },
+
+    jsa_ov_stepsBlock: { left: 54, top: 278, fontSize: 8, width: 1150, lineHeight: 2.05 },
+
+    jsa_ov_taskP2: { left: 121, top: 187, fontSize: 9, width: 680, lineHeight: 1.1 },
+
+    jsa_ov_ppeHardHat: { left: 104, top: 479, fontSize: 16, width: 30, lineHeight: 1 },
+    jsa_ov_ppeGlasses: { left: 217, top: 479, fontSize: 16, width: 30, lineHeight: 1 },
+    jsa_ov_ppeShoes: { left: 104, top: 505, fontSize: 16, width: 30, lineHeight: 1 },
+    jsa_ov_ppeGloves: { left: 217, top: 540, fontSize: 16, width: 30, lineHeight: 1 },
+    jsa_ov_ppeOtherMark: { left: 105, top: 621, fontSize: 16, width: 30, lineHeight: 1 },
+    jsa_ov_ppeOtherText: { left: 215, top: 627, fontSize:8, width: 80, lineHeight: 1 }
+  };
+
+  function applyPos() {
+    Object.keys(POS).forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const p = POS[id];
+      el.style.left = (p.left || 0) + "px";
+      el.style.top  = (p.top  || 0) + "px";
+      el.style.fontSize = (p.fontSize || 8) + "px";
+      if (p.width) el.style.width = p.width + "px";
+      el.style.lineHeight = (p.lineHeight || 1.05);
+      el.style.maxHeight  = p.maxHeight ? (p.maxHeight + "px") : "none";
+      el.style.overflow   = p.maxHeight ? "hidden" : "visible";
+    });
+  }
+
+  function buildServiceOptions() {
+    serviceSelect.innerHTML = "";
+    const ph = document.createElement("option");
+    ph.value = "";
+    ph.textContent = "-- SELECT SERVICE --";
+    ph.disabled = true;
+    ph.selected = true;
+    serviceSelect.appendChild(ph);
+
+    SERVICES.forEach(group => {
+      const og = document.createElement("optgroup");
+      og.label = group.groupLabel;
+      serviceSelect.appendChild(og);
+
+      group.items.forEach(item => {
+        const opt = document.createElement("option");
+        opt.value = item.code;
+        opt.dataset.label = item.label;
+        opt.textContent = item.label;
+        og.appendChild(opt);
+      });
+    });
+  }
+
+  function formatDateMDY(v){
+    if(!v) return "";
+    const p = v.split("-");
+    return `${p[1]}-${p[2]}-${p[0]}`;
+  }
+
+  function teamNamesInline(){
+    const raw = (teamNames.value || "").trim();
+    if(!raw) return (leaderName.value || "").trim();
+    return raw.split(/\r?\n+/).map(s => s.trim()).filter(Boolean).join(" / ");
+  }
+
+  function completeValue(){
+    const v = (completeSelect?.value || "NO").toUpperCase();
+    if(v === "BLANK") return "";
+    if(v === "YES") return "YES";
+    return "NO";
+  }
+
+  function templateToStepsBlock(lines){
+    const whoLine = teamNamesInline().toUpperCase();
+    return lines.map(r => {
+      const n    = (r[0]||" ").padEnd(3," ");
+      const step = (r[1]||" ").slice(0,40).padEnd(42," ");
+      const haz  = (r[2]||" ").slice(0,70).padEnd(72," ");
+      const ctrl = (r[3]||" ").slice(0,70).padEnd(72," ");
+      const who  = whoLine.slice(0,45).padEnd(47," ");
+      const done = completeValue();
+      const doneCol = done.padEnd(3," ");
+      return `${n}${step}${haz}${ctrl}${who}${doneCol}`;
+    }).join("\n");
+  }
+
+  function textToStepsBlock(raw){
+    const lines = (raw || "").split("\n").map(x => x.trim()).filter(Boolean);
+    const rows = lines.map(line => {
+      const m = line.match(/^(\d+)\)\s*(.*)$/);
+      let stepNum = " ";
+      let rest = line;
+      if(m){ stepNum = m[1]; rest = m[2]; }
+      const parts = rest.split("|").map(x => x.trim());
+      const step = parts[0] || "";
+      const haz  = parts[1] || "";
+      const ctrl = parts[2] || "";
+      const who  = parts[3] || "";
+      const done = parts[4] || "N";
+      return [stepNum, step, haz, ctrl, who, done];
+    });
+    return templateToStepsBlock(rows);
+  }
+
+  let STEPS_RAW = "";
+
+  function syncPreview(){
+    O.company.textContent = companyInput.value || "";
+    O.site.textContent = siteInput.value || "";
+    O.date.textContent = dateInput.value ? formatDateMDY(dateInput.value) : "";
+    O.task.textContent = taskInput.value || "";
+    O.taskP2.textContent = taskInput.value || "";
+    O.injury.textContent = injuryInput.value || "";
+
+    const mark = "■";
+    O.refYes.textContent = (refReviewed.value === "YES") ? mark : "";
+    O.refNA.textContent  = (refReviewed.value === "NA")  ? mark : "";
+    O.refAttach.textContent = refAttach.value || "";
+
+    O.riskModifyYes.textContent = (riskModify.value === "YES") ? mark : "";
+    O.riskModifyNo.textContent  = (riskModify.value === "NO")  ? mark : "";
+    O.riskRemainsYes.textContent = (riskRemains.value === "YES") ? mark : "";
+    O.riskRemainsNo.textContent  = (riskRemains.value === "NO")  ? mark : "";
+
+    O.ppeOther.textContent = ppeOther.value || "";
+
+    O.reviewerName.textContent = reviewerName.value || "";
+    O.reviewerCompany.textContent = reviewerCompany.value || "";
+    O.leaderName.textContent = leaderName.value || "";
+    O.leaderCompany.textContent = leaderCompany.value || "";
+    O.teamNames.textContent = teamNames.value || "";
+
+    O.stepsBlock.textContent = textToStepsBlock(STEPS_RAW).toUpperCase();
+  }
+
+  function enableLivePreview(){
+    const formPanel = document.querySelector("#jsaApp .panel.form");
+    if(!formPanel) return;
+    const controls = formPanel.querySelectorAll("input, textarea, select");
+    let t = null;
+    const scheduleSync = () => { clearTimeout(t); t = setTimeout(() => syncPreview(), 30); };
+    controls.forEach(el => {
+      el.addEventListener("input", scheduleSync);
+      el.addEventListener("change", scheduleSync);
+      el.addEventListener("blur", scheduleSync);
+    });
+  }
+
+  function showPage(n){
+    if(n === 1){
+      tabP1.classList.add("active"); tabP2.classList.remove("active");
+      canvasP1.style.display = "block";
+      canvasP2.style.display = "none";
+      whichHint.textContent = "Previewing Page 1";
+    } else {
+      tabP2.classList.add("active"); tabP1.classList.remove("active");
+      canvasP1.style.display = "none";
+      canvasP2.style.display = "block";
+      whichHint.textContent = "Previewing Page 2";
+    }
+  }
+  tabP1.addEventListener("click", () => showPage(1));
+  tabP2.addEventListener("click", () => showPage(2));
+
+  serviceSelect.addEventListener("change", () => {
+    const code = serviceSelect.value;
+    const t = SERVICE_TEMPLATES[code];
+    if(!t) return;
+
+    
+
+    const DEFAULTS = {
+      reviewerName: "DANNY GARCIA",
+      reviewerCompany: "POWERSAT COMM USA LP",
+      leaderName: "ULISES RANGEL",
+      leaderCompany: "POWERSAT COMM USA LP",
+      teamNames: "ULISES RANGEL"
+    };
+
+    if(!reviewerName.value.trim())    reviewerName.value    = DEFAULTS.reviewerName;
+    if(!reviewerCompany.value.trim()) reviewerCompany.value = DEFAULTS.reviewerCompany;
+    if(!leaderName.value.trim())      leaderName.value      = DEFAULTS.leaderName;
+    if(!leaderCompany.value.trim())   leaderCompany.value   = DEFAULTS.leaderCompany;
+    if(!teamNames.value.trim())       teamNames.value       = DEFAULTS.teamNames;
+
+    if(!dateInput.value){
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, "0");
+      const dd = String(today.getDate()).padStart(2, "0");
+      dateInput.value = `${yyyy}-${mm}-${dd}`;
+    }
+
+    taskInput.value   = t.task   || taskInput.value;
+    injuryInput.value = t.injury || injuryInput.value;
+
+    refReviewed.value = "YES";
+    riskModify.value  = "YES";
+    riskRemains.value = "YES";
+
+      // autofill references
+    if (REF_MAP[code]) {
+    refReviewed.value = "YES";
+    refAttach.value = REF_MAP[code];
+    }
+
+
+    if(t.ppePreset){
+      ppePreset.value = t.ppePreset;
+      ppePreset.dispatchEvent(new Event("change", { bubbles:true }));
+    }
+
+    if(Array.isArray(t.steps)){
+      STEPS_RAW = t.steps.map(r => `${r[0]}) ${r[1]} | ${r[2]} | ${r[3]} | ${r[4]} | ${r[5]}`).join("\n");
+    }
+
+    syncPreview();
+  });
+
+  ppePreset.addEventListener("change", () => {
+    const v = ppePreset.value;
+    const mark = "■";
+
+    O.ppeHardHat.textContent = "";
+    O.ppeGlasses.textContent = "";
+    O.ppeShoes.textContent   = "";
+    O.ppeGloves.textContent  = "";
+    O.ppeOtherMark.textContent = "";
+    ppeOther.value = "";
+    O.ppeOther.textContent = "";
+    O.ppeOtherText.textContent = "";
+
+    if(!v){ syncPreview(); return; }
+
+    O.ppeHardHat.textContent = mark;
+    O.ppeGlasses.textContent = mark;
+    O.ppeShoes.textContent   = mark;
+    O.ppeGloves.textContent  = mark;
+
+    O.ppeOtherMark.textContent = mark;
+    ppeOther.value = "FR CLOTHES";
+    O.ppeOtherText.textContent = "FR CLOTHES";
+
+    syncPreview();
+  });
+         async function generateJsaPdf(){
+  if(typeof html2canvas !== "function"){ alert("html2canvas NO cargó."); return; }
+  if(!window.jspdf || !window.jspdf.jsPDF){ alert("jsPDF NO cargó."); return; }
+
+  syncPreview();
+
+  const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ orientation:"landscape", unit:"pt", format:"a4" });
+  const pdfW = 841.89, pdfH = 595.28;
+
+  async function captureToImg(el){
+    el.style.overflow = "hidden";
+    el.scrollTop = 0; el.scrollLeft = 0;
+    void el.offsetHeight;
+
+    const rect = el.getBoundingClientRect();
+    if(rect.width < 10 || rect.height < 10) throw new Error("Canvas size inválido ("+rect.width+"x"+rect.height+").");
+
+    const scale = isIOS ? 1 : Math.min(2, (window.devicePixelRatio || 1));
+    const canvas = await html2canvas(el, { scale, useCORS: true, backgroundColor: "#ffffff", logging: false });
+    return canvas.toDataURL("image/jpeg", 0.85);
+  }
+
+  const prevP1 = canvasP1.style.display;
+  const prevP2 = canvasP2.style.display;
+
+  canvasP1.style.display = "block";
+  canvasP2.style.display = "none";
+  const img1 = await captureToImg(canvasP1);
+  pdf.addImage(img1, "JPEG", 0, 0, pdfW, pdfH, undefined, "FAST");
+
+  pdf.addPage();
+  canvasP1.style.display = "none";
+  canvasP2.style.display = "block";
+  const img2 = await captureToImg(canvasP2);
+  pdf.addImage(img2, "JPEG", 0, 0, pdfW, pdfH, undefined, "FAST");
+
+  canvasP1.style.display = prevP1;
+  canvasP2.style.display = prevP2;
+
+  const fileName = ("JSA_" + (siteInput.value || "SITE") + "_" + (dateInput.value || ""))
+    .replace(/\s+/g,"_")
+    .toUpperCase();
 
   const blob = pdf.output("blob");
-const url = URL.createObjectURL(blob);
+  const url = URL.createObjectURL(blob);
 
-const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if(isIOS) window.location.href = url;
+  else {
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fileName + ".pdf";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
 
-if (isIOS) {
-  window.location.href = url;
-} else {
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `${fileName}.pdf`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+async function captureJsaPagesAsImages(){
+  syncPreview();
+
+  const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+  async function captureToImg(el){
+    el.style.overflow = "hidden";
+    el.scrollTop = 0; el.scrollLeft = 0;
+    void el.offsetHeight;
+
+    const rect = el.getBoundingClientRect();
+    if(rect.width < 10 || rect.height < 10) throw new Error("Canvas size inválido ("+rect.width+"x"+rect.height+").");
+
+    const scale = isIOS ? 1 : Math.min(2, (window.devicePixelRatio || 1));
+    const canvas = await html2canvas(el, { scale, useCORS: true, backgroundColor: "#ffffff", logging: false });
+    return canvas.toDataURL("image/jpeg", 0.85);
+  }
+
+  const prevP1 = canvasP1.style.display;
+  const prevP2 = canvasP2.style.display;
+
+  canvasP1.style.display = "block";
+  canvasP2.style.display = "none";
+  const img1 = await captureToImg(canvasP1);
+
+  canvasP1.style.display = "none";
+  canvasP2.style.display = "block";
+  const img2 = await captureToImg(canvasP2);
+
+  canvasP1.style.display = prevP1;
+  canvasP2.style.display = prevP2;
+
+  return { img1, img2 };
 }
 
 
-
-// liberar memoria después
-setTimeout(() => URL.revokeObjectURL(url), 1000);
-
-});
-
-   // ← AQUÍ SE CIERRA EL BLOQUE DEL PDF (faltaba)
-
-/* JSON Export */
-downloadJSON.addEventListener("click", () => {
-
-  const data = {
-    folio:folioInput.value,
-    stateCode:stateCodeInput.value,
-    customer:customerInput.value,
-    rig:rigInput.value,
-    well:wellInput.value,
-    parish:parishInput.value,
-    date:dateInput.value,
-    tech:techInput.value,
-    predComment:predComment.value,
-    desc:descInput.value,
-    wc:wcInput.value,
-    a:aInput.value,
-    d:dInput.value,
-    rt:rtManual.value,
-    workAddr:workAddr.value,
-    hqAddr:hqAddr.value
-  };
-
-  const blob = new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
-  const url = URL.createObjectURL(blob);
-
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "ticket.json";
-  a.click();
-
-  URL.revokeObjectURL(url);
-});
-
-/* COPY TITLE */
-document.getElementById("copyTitle").addEventListener("click", () => {
-
-  const state  = stateCodeInput.value.trim().toUpperCase();
-  const folio  = folioInput.value.trim();
-  const cust   = customerInput.value.trim().replace(/\s+/g," ");
-  const well   = wellInput.value.trim().replace(/\s+/g," ");
-
-  const srvOpt = serviceSelect.options[serviceSelect.selectedIndex];
-  const srv    = srvOpt ? (srvOpt.dataset.label || srvOpt.textContent) : "";
-
-  let desc     = descInput.value.trim().split(/\s+/).slice(0,3).join(" ");
-
-  let wcStatus = "NC";
-  if (wcInput.value.trim() !== "" && wcInput.value.trim().toUpperCase() !== "N/C") {
-      wcStatus = "WC";
+// Botón verde: solo JSA
+genPdfBtn.addEventListener("click", async () => {
+  try{
+    await generateJsaPdf();
+  }catch(err){
+    alert("PDF ERROR: " + (err?.message || err));
+    console.error(err);
   }
-
-  const title = `${state}-${folio} ${cust} ${well} ${srv} ${desc} ${wcStatus}`.toUpperCase();
-
-  // Intento de copiar
-  navigator.clipboard.writeText(title)
-    .then(() => alert("TITLE COPIED:\n" + title))
-    .catch(() => {
-      // fallback para iPhone viejo o Safari
-      const temp = document.createElement("textarea");
-      temp.value = title;
-      document.body.appendChild(temp);
-      temp.select();
-      document.execCommand("copy");
-      document.body.removeChild(temp);
-      alert("TITLE COPIED:\n" + title);
-    });
 });
+  genAllPdfBtn?.addEventListener("click", async () => {
+  try{
+    if(typeof html2canvas !== "function"){ alert("html2canvas NO cargó."); return; }
+    if(!window.jspdf || !window.jspdf.jsPDF){ alert("jsPDF NO cargó."); return; }
+
+    
+
+    // En vez de pedir PDF del ticket, queremos IMAGEN para insertarla en un solo pdf:
+    // Por simplicidad (y menos cambios), aquí capturamos el ticketCanvas como imagen directo:
+    const ticketCanvasEl = document.getElementById("ticketCanvas");
+    if(!ticketCanvasEl){ alert("No encuentro ticketCanvas."); return; }
+
+    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    const scaleTicket = isIOS ? 1 : 2;
+
+    if(typeof window.ticketSyncOverlays === "function") window.ticketSyncOverlays();
+
+    // Asegura overlays actualizados
+    // (Project1 syncOverlays está dentro de su IIFE; por eso capturamos tal cual se ve.
+    //  Si quieres perfecto, expón syncOverlays también. Pero normalmente ya está actualizado por blur/input.)
+    ticketCanvasEl.style.overflow = "hidden";
+    ticketCanvasEl.scrollTop = 0; ticketCanvasEl.scrollLeft = 0;
+
+    const rectT = ticketCanvasEl.getBoundingClientRect();
+    const ticketShot = await html2canvas(ticketCanvasEl, {
+      scale: scaleTicket,
+      useCORS: true,
+      backgroundColor: "#ffffff",
+      width: rectT.width,
+      height: rectT.height
+    });
+    const ticketImg = ticketShot.toDataURL("image/jpeg", 0.85);
+
+    // 2) Captura JSA page1/page2 como imágenes
+    const { img1: jsaImg1, img2: jsaImg2 } = await captureJsaPagesAsImages();
+
+    // 3) Construye UN SOLO PDF 3 páginas (rotando por página)
+    const { jsPDF } = window.jspdf;
+
+    // Página 1: Ticket portrait A4
+    const pdf = new jsPDF({ orientation:"portrait", unit:"pt", format:"a4" });
+    pdf.addImage(ticketImg, "JPEG", 0, 0, 595.28, 841.89, undefined, "FAST");
+
+    // Página 2: JSA P1 landscape A4
+    pdf.addPage("a4", "landscape");
+    pdf.addImage(jsaImg1, "JPEG", 0, 0, 841.89, 595.28, undefined, "FAST");
+
+    // Página 3: JSA P2 landscape A4
+    pdf.addPage("a4", "landscape");
+    pdf.addImage(jsaImg2, "JPEG", 0, 0, 841.89, 595.28, undefined, "FAST");
+
+    // Nombre final (usa Site + Date para que sea consistente)
+    const fileName = ("TICKET_JSA_" + (siteInput.value || "SITE") + "_" + (dateInput.value || ""))
+      .replace(/\s+/g,"_")
+      .toUpperCase();
+
+    // Descargar / abrir
+    const blob = pdf.output("blob");
+    const url = URL.createObjectURL(blob);
+
+    if(isIOS) window.location.href = url;
+    else{
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName + ".pdf";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+
+  }catch(err){
+    alert("COMBO PDF ERROR: " + (err?.message || err));
+    console.error(err);
+  }
+});
+
+  window.addEventListener("DOMContentLoaded", () => {
+    buildServiceOptions();
+    bg1.src = "bg-page-1.jpg";
+    bg2.src = "bg-page-2.jpg";
+    applyPos();
+    showPage(1);
+    syncPreview();
+    enableLivePreview();
+    if (typeof window.pushToJSA === "function") window.pushToJSA();
+  });
+
+})();
 </script>
+
 </body>
 </html>
-
