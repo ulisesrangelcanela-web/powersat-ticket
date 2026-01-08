@@ -250,9 +250,143 @@
   #jsaApp .jsa-canvas{width:940px;}
 }
 </style>
+
+  <style>
+    /* ===== AUTH GATE (bloquea UI hasta login) ===== */
+    #appShell{ display:none; }
+
+    #authGate{
+      position:fixed; inset:0;
+      background:rgba(0,0,0,.55);
+      display:flex; align-items:center; justify-content:center;
+      z-index:999999;
+      padding:18px;
+    }
+    #authBox{
+      width:100%;
+      max-width:420px;
+      background:#fff;
+      border-radius:12px;
+      box-shadow:0 18px 50px rgba(0,0,0,.35);
+      padding:16px;
+    }
+    #authBox h2{ margin:0 0 6px 0; font-size:18px; }
+    #authBox .muted{ color:#555; font-size:12px; margin-bottom:12px; }
+
+    #authBox label{
+      display:block;
+      font-size:12px;
+      font-weight:700;
+      margin-top:10px;
+    }
+    #authBox input{
+      width:100%;
+      padding:10px;
+      border:1px solid #ddd;
+      border-radius:8px;
+      margin-top:6px;
+      font-size:14px;
+    }
+    #authRow{ display:flex; gap:10px; margin-top:12px; }
+
+    #authBtn{
+      flex:1;
+      padding:10px;
+      border:none;
+      border-radius:8px;
+      background:var(--accent);
+      color:#fff;
+      font-weight:700;
+      cursor:pointer;
+    }
+
+    #logoutBtn{
+      padding:8px 10px;
+      border:none;
+      border-radius:8px;
+      background:#b00020;
+      color:#fff;
+      font-weight:700;
+      cursor:pointer;
+    }
+
+    #authErr{
+      margin-top:10px;
+      font-size:12px;
+      color:#b00020;
+      white-space:pre-wrap;
+    }
+
+    #authTopbar{
+      display:none;
+      position:sticky;
+      top:0;
+      z-index:9999;
+      background:#f3f5f8;
+      padding:8px 0;
+    }
+
+    #authTopbarInner{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+    }
+
+    #whoami{
+      font-size:12px;
+      color:#333;
+    }
+  </style>
+
+
+
 </head>
 
 <body>
+
+<!-- ===== AUTH TOPBAR (solo visible logueado) ===== -->
+<div id="authTopbar">
+  <div id="authTopbarInner">
+    <div id="whoami"></div>
+    <button id="logoutBtn" type="button">LOG OUT</button>
+  </div>
+</div>
+
+<!-- ===== AUTH GATE (pantalla de login) ===== -->
+<div id="authGate">
+  <div id="authBox">
+    <h2>POWERSAT TOOLS — LOGIN</h2>
+    <p class="muted">
+      Access restricted. Sign in with your assigned credentials.
+    </p>
+
+    <label>EMAIL</label>
+    <input
+      id="loginEmail"
+      type="email"
+      autocomplete="username"
+      placeholder="tech@powersat.com"
+    />
+
+    <label>PASSWORD</label>
+    <input
+      id="loginPass"
+      type="password"
+      autocomplete="current-password"
+      placeholder="••••••••"
+    />
+
+    <div id="authRow">
+      <button id="authBtn" type="button">SIGN IN</button>
+    </div>
+
+    <div id="authErr"></div>
+  </div>
+</div>
+
+
+<div id="appShell">
+
 
 <!-- =========================
      PROJECT 1 (TOP)
@@ -2267,6 +2401,6 @@ genPdfBtn.addEventListener("click", async () => {
 
 })();
 </script>
-
+</div>
 </body>
 </html>
