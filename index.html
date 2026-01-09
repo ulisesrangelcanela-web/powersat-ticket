@@ -983,16 +983,16 @@ JOHN D.
 }
 
 
-async function saveTicketToFirestore(extra = {}){
+               async function saveTicketToFirestore(extra = {}){
   const db = window.firebaseDB;
   const auth = window.firebaseAuth;
 
-  if(!db) throw new Error("Firestore no inicializado (window.firebaseDB).");
+  if(!db) throw new Error("Firestore no inicializado.");
   if(!auth?.currentUser) throw new Error("No hay usuario logueado.");
 
   const data = collectTicketData();
 
-  const docPayload = {
+  const payload = {
     ...data,
     ...extra,
     uid: auth.currentUser.uid,
@@ -1003,11 +1003,12 @@ async function saveTicketToFirestore(extra = {}){
 
   const ref = await window.fsAddDoc(
     window.fsCollection(db, "serviceTickets"),
-    docPayload
+    payload
   );
 
   return ref.id;
 }
+
 
 // Exponer para el botón COMBO en Project 2
 window.saveTicketToFirestore = saveTicketToFirestore;
@@ -2157,16 +2158,14 @@ window.addEventListener("DOMContentLoaded", pushToJSA);
   };
 }
 
-async function saveJsaToFirestore(extra = {}){
+              async function saveJsaToFirestore(extra = {}){
   const db = window.firebaseDB;
   const auth = window.firebaseAuth;
 
   if(!db) throw new Error("Firestore no inicializado (window.firebaseDB).");
   if(!auth?.currentUser) throw new Error("No hay usuario logueado.");
 
-  // IMPORTANTE: asegurar que defaults/templates ya estén aplicados
   syncPreview();
-
   const data = collectJsaData();
 
   const payload = {
@@ -2179,12 +2178,13 @@ async function saveJsaToFirestore(extra = {}){
   };
 
   const ref = await window.fsAddDoc(
-    window.fsCollection(db, "jsaForms"),
+    window.fsCollection(db, "jsaSnapshots"),
     payload
   );
 
   return ref.id;
 }
+
 
 // opcional: exponer para uso cruzado
 window.saveJsaToFirestore = saveJsaToFirestore;
@@ -2194,6 +2194,20 @@ window.collectJsaData = collectJsaData;
 
   const genPdfBtn = document.getElementById("jsa_genPdfBtn");
   const genAllPdfBtn = document.getElementById("genAllPdfBtn");
+
+  function assertFolioAndState(){
+  const folio = (document.getElementById("folioInput")?.value || "").trim();
+  const st    = (document.getElementById("stateCodeInput")?.value || "").trim().toUpperCase();
+
+  if(!/^\d{1,5}$/.test(folio)){
+    throw new Error("FOLIO inválido (1 a 5 dígitos).");
+  }
+
+  if(st.length < 2){
+    throw new Error("STATE CODE inválido (ej: NM, TX).");
+  }
+}
+
 
 
   const bg1 = document.getElementById("jsa_bg1");
@@ -2626,33 +2640,41 @@ async function captureJsaPagesAsImages(){
 
 
 // Botón verde: JSA -> guarda en Firestore + genera PDF
+               // Botón verde: JSA -> guarda DENTRO de serviceTickets + genera PDF
 genPdfBtn.addEventListener("click", async () => {
   try{
-    // 1) Asegura que Ticket->JSA esté sincronizado (si vienes del ticket)
+    assertFolioAndState();
+    // 1) Asegura sincronía ticket->jsa
     if (typeof window.pushToJSA === "function") window.pushToJSA();
 
-    // 2) Asegura overlays/steps renderizados antes de guardar
+    // 2) Asegura preview/steps renderizados
     if (typeof syncPreview === "function") syncPreview();
 
-    // 3) Calcula el nombre del PDF (igual lógica que en generateJsaPdf)
+    // 3) Nombre del PDF
     const pdfName = ("JSA_" + (siteInput.value || "SITE") + "_" + (dateInput.value || ""))
       .replace(/\s+/g, "_")
       .toUpperCase() + ".pdf";
 
-    // 4) Guarda en Firestore (jsaForms)
-    if (typeof window.saveJsaToFirestore !== "function") {
-      throw new Error("saveJsaToFirestore NO está disponible en window.");
+    // 4) Snapshot del JSA
+    const jsaSnapshot = (typeof window.collectJsaData === "function")
+      ? window.collectJsaData()
+      : null;
+
+    // 5) Guardar SOLO en serviceTickets (con jsa embebido)
+    if (typeof window.saveTicketToFirestore !== "function") {
+      throw new Error("saveTicketToFirestore NO está disponible.");
     }
 
-    const jsaDocId = await window.saveJsaToFirestore({
-      action: "GENERATE_JSA_PDF",
+    const ticketDocId = await window.saveTicketToFirestore({
+      action: "GENERATE_JSA_PDF_ONLY",
       pdfType: "JSA_2PG",
-      pdfName
+      pdfName,
+      jsa: jsaSnapshot || { note: "collectJsaData not available" }
     });
 
-    console.log("Saved JSA doc:", jsaDocId, "pdfName:", pdfName);
+    console.log("Saved JSA inside serviceTickets doc:", ticketDocId);
 
-    // 5) Genera y descarga el PDF
+    // 6) Genera y descarga el PDF
     await generateJsaPdf();
 
   }catch(err){
@@ -2664,67 +2686,28 @@ genPdfBtn.addEventListener("click", async () => {
 
 
 
+
   // Botón azul: TICKET + JSA (3 páginas en 1 PDF)
+                    // Botón azul: TICKET + JSA (3 páginas en 1 PDF)
 genAllPdfBtn.addEventListener("click", async () => {
   try{
-           // 0) Guardar Ticket + JSA completos (si hay login)
-let ticketDocId = "";
-let jsaDocId = "";
+    assertFolioAndState();
+    // 0) Asegura sincronía ticket->jsa y render final
+    if (typeof window.pushToJSA === "function") window.pushToJSA();
+    if (typeof syncPreview === "function") syncPreview();
+    if (typeof window.ticketSyncOverlays === "function") window.ticketSyncOverlays();
 
-try{
-  // Asegura que el JSA esté actualizado desde Ticket (campos + servicio + template + steps)
-  if (typeof window.pushToJSA === "function") window.pushToJSA();
+    // 1) Snapshot JSA (datos + steps finales)
+    const jsaSnapshot = (typeof window.collectJsaData === "function")
+      ? window.collectJsaData()
+      : null;
 
-  // Asegura que el preview/steps estén renderizados
-  if (typeof syncPreview === "function") syncPreview();
-
-  // Toma snapshot de JSA (lo que realmente está en el form + steps)
-  const jsaSnapshot = (typeof window.collectJsaData === "function")
-    ? window.collectJsaData()
-    : null;
-
-  // Guarda ticket y EMBEDE el JSA dentro del mismo doc del ticket
-  if (typeof window.saveTicketToFirestore === "function") {
-    ticketDocId = await window.saveTicketToFirestore({
-      action: "GENERATE_TICKET_PLUS_JSA_PDF",
-      pdfType: "COMBO",
-      jsa: jsaSnapshot || { note: "collectJsaData not available" }
-    });
-  } else {
-    throw new Error("saveTicketToFirestore no está disponible.");
-  }
-
-  // (Opcional) también guardarlo en su colección jsaForms
-  // QUITO el if para que si falla, te enteres.
-  if (typeof window.saveJsaToFirestore !== "function") {
-    throw new Error("saveJsaToFirestore NO está disponible en window.");
-  }
-
-  jsaDocId = await window.saveJsaToFirestore({
-    action: "GENERATE_TICKET_PLUS_JSA_PDF",
-    pdfType: "COMBO",
-    linkedTicketDocId: ticketDocId || ""
-  });
-
-  console.log("Saved ticket:", ticketDocId, "Saved jsa:", jsaDocId);
-
-}catch(e){
-  alert("FIRESTORE SAVE ERROR (COMBO): " + (e?.message || e));
-  console.error(e);
-  // tú decides si continuar PDF aunque falle guardado
-}
-
-
-
-    // 1) Captura TICKET como imagen
+    // 2) Captura imágenes (ticket + 2 páginas jsa)
     const ticketCanvasEl = document.getElementById("ticketCanvas");
-    if(!ticketCanvasEl){ alert("No encuentro ticketCanvas."); return; }
+    if(!ticketCanvasEl) throw new Error("No encuentro ticketCanvas.");
 
     const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
     const scaleTicket = isIOS ? 1 : 2;
-
-    // Asegura overlays del ticket actualizados
-    if(typeof window.ticketSyncOverlays === "function") window.ticketSyncOverlays();
 
     ticketCanvasEl.style.overflow = "hidden";
     ticketCanvasEl.scrollTop = 0; ticketCanvasEl.scrollLeft = 0;
@@ -2739,33 +2722,42 @@ try{
     });
     const ticketImg = ticketShot.toDataURL("image/jpeg", 0.85);
 
-    // 2) Captura JSA page1/page2 como imágenes
     const { img1: jsaImg1, img2: jsaImg2 } = await captureJsaPagesAsImages();
 
-    // 3) Construye UN SOLO PDF 3 páginas
+    // 3) PDF 3 páginas
     const { jsPDF } = window.jspdf;
-
-    // Página 1: Ticket portrait A4
     const pdf = new jsPDF({ orientation:"portrait", unit:"pt", format:"a4" });
     pdf.addImage(ticketImg, "JPEG", 0, 0, 595.28, 841.89, undefined, "FAST");
 
-    // Página 2: JSA P1 landscape A4
     pdf.addPage("a4", "landscape");
     pdf.addImage(jsaImg1, "JPEG", 0, 0, 841.89, 595.28, undefined, "FAST");
 
-    // Página 3: JSA P2 landscape A4
     pdf.addPage("a4", "landscape");
     pdf.addImage(jsaImg2, "JPEG", 0, 0, 841.89, 595.28, undefined, "FAST");
 
-    // Nombre final
     const fileName = ("TICKET_JSA_" + (siteInput.value || "SITE") + "_" + (dateInput.value || ""))
       .replace(/\s+/g,"_")
       .toUpperCase();
 
-    // Descargar / abrir
     const blob = pdf.output("blob");
-    const url = URL.createObjectURL(blob);
 
+    // 4) GUARDA SOLO UNA VEZ EN serviceTickets (ticket + jsa + pdfName)
+    let ticketDocId = "";
+    if (typeof window.saveTicketToFirestore !== "function") {
+      throw new Error("saveTicketToFirestore no está disponible.");
+    }
+
+    ticketDocId = await window.saveTicketToFirestore({
+      action: "GENERATE_TICKET_PLUS_JSA_PDF",
+      pdfType: "COMBO",
+      pdfName: fileName + ".pdf",
+      jsa: jsaSnapshot || { note: "collectJsaData not available" }
+    });
+
+    console.log("Saved COMBO in serviceTickets doc:", ticketDocId);
+
+    // 5) Descargar / abrir PDF
+    const url = URL.createObjectURL(blob);
     if(isIOS) window.location.href = url;
     else{
       const a = document.createElement("a");
@@ -2778,7 +2770,7 @@ try{
     setTimeout(() => URL.revokeObjectURL(url), 2000);
 
   }catch(err){
-    alert("COMBO PDF ERROR: " + (err?.message || err));
+    alert("COMBO ERROR: " + (err?.message || err));
     console.error(err);
   }
 });
@@ -2800,6 +2792,7 @@ try{
 </div>
 </body>
 </html>
+
 
 
 
