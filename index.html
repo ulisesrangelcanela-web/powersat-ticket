@@ -702,6 +702,7 @@ JOHN D.
 
   <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+
   import {
     getAuth,
     onAuthStateChanged,
@@ -709,25 +710,37 @@ JOHN D.
     signOut
   } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
 
+  import {
+    getFirestore,
+    collection,
+    addDoc,
+    serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+
   const firebaseConfig = {
-    apiKey: "AIzaSyCb-m5x7LN3fLn8gn7EO923DXw-3qjTx4A",
-    authDomain: "authenticationpsat.firebaseapp.com",
-    projectId: "authenticationpsat",
-    storageBucket: "authenticationpsat.firebasestorage.app",
-    messagingSenderId: "739826148130",
-    appId: "1:739826148130:web:76fbe29bc62ff715cb3b7b"
-    // measurementId NO es necesario para Auth
+    apiKey: "...",
+    authDomain: "...",
+    projectId: "...",
+    storageBucket: "...",
+    messagingSenderId: "...",
+    appId: "..."
   };
 
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
+  const db = getFirestore(app);
 
-  // Exponer a tus scripts normales (no-module)
+  window.firebaseDB = db;
+  window.fsAddDoc = addDoc;
+  window.fsCollection = collection;
+  window.fsServerTimestamp = serverTimestamp;
+
   window.firebaseAuth = auth;
   window.onAuthStateChanged = onAuthStateChanged;
   window.signInWithEmailAndPassword = signInWithEmailAndPassword;
   window.signOutFirebase = () => signOut(auth);
 </script>
+
 
   <script>
 (function(){
@@ -788,6 +801,10 @@ JOHN D.
       if(user) showApp(user);
       else showGate();
     });
+
+    
+
+    
 
     // Login
     btnIn.addEventListener("click", async () => {
@@ -911,7 +928,64 @@ JOHN D.
   const generatePDF     = document.getElementById('generatePDF');
   const locBtn          = document.getElementById('locBtn');
   const manualCoord     = document.getElementById('manualCoord');
-  
+
+
+  function collectTicketData(){
+  const srvOpt = serviceSelect.options[serviceSelect.selectedIndex];
+  return {
+    type: "ticket",
+    folio: (folioInput.value || "").trim(),
+    stateCode: (stateCodeInput.value || "").trim().toUpperCase(),
+    customer: (customerInput.value || "").trim().toUpperCase(),
+    rig: (rigInput.value || "").trim().toUpperCase(),
+    well: (wellInput.value || "").trim().toUpperCase(),
+    parishCounty: (parishInput.value || "").trim().toUpperCase(),
+    date: dateInput.value || "",
+
+    tech: (techInput.value || "").trim().toUpperCase(),
+
+    serviceCode: (serviceSelect.value || "").trim(),
+    serviceLabel: srvOpt ? (srvOpt.dataset.label || "") : "",
+
+    comments: (descInput.value || "").trim().toUpperCase(),
+    wc: (wcInput.value || "").trim().toUpperCase(),
+    arrival: aInput.value || "",
+    departure: dInput.value || "",
+
+    hqCoords: (hqAddr.value || "").trim(),
+    jobCoords: (workAddr.value || "").trim(),
+    rtMiles: (rtManual.value || "").trim()
+  };
+}
+
+async function saveTicketToFirestore(extra = {}){
+  const db = window.firebaseDB;
+  const auth = window.firebaseAuth;
+
+  if(!db) throw new Error("Firestore no inicializado (window.firebaseDB).");
+  if(!auth?.currentUser) throw new Error("No hay usuario logueado.");
+
+  const data = collectTicketData();
+
+  const docPayload = {
+    ...data,
+    ...extra,
+    uid: auth.currentUser.uid,
+    userEmail: auth.currentUser.email || "",
+    createdAt: window.fsServerTimestamp(),
+    clientCreatedAtISO: new Date().toISOString()
+  };
+
+  const ref = await window.fsAddDoc(
+    window.fsCollection(db, "serviceTickets"),
+    docPayload
+  );
+
+  return ref.id;
+}
+
+// Exponer para el botón COMBO en Project 2
+window.saveTicketToFirestore = saveTicketToFirestore;
 
 
   const folioOverlay        = document.getElementById('folioOverlay');
@@ -1300,8 +1374,11 @@ if(mLatDec && mLonDec){
   }
 
   window.addEventListener("DOMContentLoaded", () => {
-    buildServiceOptions();
-  });
+  buildServiceOptions();
+  pushToJSA();
+  syncOverlays();
+});
+
 
   customerInput.addEventListener('focus', e => e.target.select());
   rigInput.addEventListener('focus', e => e.target.select());
@@ -1655,13 +1732,20 @@ function downloadBlob(blob, fileNameNoExt){
 // Botón verde Project1: sigue funcionando normal (solo Ticket)
 generatePDF.addEventListener("click", async () => {
   try{
+    // 1) Guarda registro en Firestore
+    const saveId = await saveTicketToFirestore({ action: "GENERATE_TICKET_PDF" });
+
+    // 2) Genera PDF
     const { blob, fileName } = await generateTicketPdfBlob();
     downloadBlob(blob, fileName);
+
+    console.log("Saved ticket doc:", saveId);
   }catch(err){
-    alert("TICKET PDF ERROR: " + (err?.message || err));
+    alert("SAVE/PDF ERROR: " + (err?.message || err));
     console.error(err);
   }
 });
+
 
 
   document.getElementById("copyTitle").addEventListener("click", () => {
@@ -2442,26 +2526,37 @@ genPdfBtn.addEventListener("click", async () => {
     console.error(err);
   }
 });
-  genAllPdfBtn?.addEventListener("click", async () => {
+
+
+  // Botón azul: TICKET + JSA (3 páginas en 1 PDF)
+genAllPdfBtn.addEventListener("click", async () => {
   try{
-    if(typeof html2canvas !== "function"){ alert("html2canvas NO cargó."); return; }
-    if(!window.jspdf || !window.jspdf.jsPDF){ alert("jsPDF NO cargó."); return; }
+    // 0) Guardar ticket en Firestore (si existe función expuesta y hay login)
+    let saveId = "";
+    if (typeof window.saveTicketToFirestore === "function") {
+      try{
+        saveId = await window.saveTicketToFirestore({ action: "GENERATE_TICKET_PLUS_JSA_PDF" });
+        console.log("Saved ticket doc:", saveId);
+      }catch(e){
+        alert("FIRESTORE SAVE ERROR (COMBO): " + (e?.message || e));
+        console.error(e);
+        // Si quieres que aún así genere el PDF aunque falle el guardado, lo dejamos continuar.
+        // return;
+      }
+    } else {
+      console.warn("window.saveTicketToFirestore no existe.");
+    }
 
-    
-
-    // En vez de pedir PDF del ticket, queremos IMAGEN para insertarla en un solo pdf:
-    // Por simplicidad (y menos cambios), aquí capturamos el ticketCanvas como imagen directo:
+    // 1) Captura TICKET como imagen
     const ticketCanvasEl = document.getElementById("ticketCanvas");
     if(!ticketCanvasEl){ alert("No encuentro ticketCanvas."); return; }
 
     const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
     const scaleTicket = isIOS ? 1 : 2;
 
+    // Asegura overlays del ticket actualizados
     if(typeof window.ticketSyncOverlays === "function") window.ticketSyncOverlays();
 
-    // Asegura overlays actualizados
-    // (Project1 syncOverlays está dentro de su IIFE; por eso capturamos tal cual se ve.
-    //  Si quieres perfecto, expón syncOverlays también. Pero normalmente ya está actualizado por blur/input.)
     ticketCanvasEl.style.overflow = "hidden";
     ticketCanvasEl.scrollTop = 0; ticketCanvasEl.scrollLeft = 0;
 
@@ -2478,7 +2573,7 @@ genPdfBtn.addEventListener("click", async () => {
     // 2) Captura JSA page1/page2 como imágenes
     const { img1: jsaImg1, img2: jsaImg2 } = await captureJsaPagesAsImages();
 
-    // 3) Construye UN SOLO PDF 3 páginas (rotando por página)
+    // 3) Construye UN SOLO PDF 3 páginas
     const { jsPDF } = window.jspdf;
 
     // Página 1: Ticket portrait A4
@@ -2493,7 +2588,7 @@ genPdfBtn.addEventListener("click", async () => {
     pdf.addPage("a4", "landscape");
     pdf.addImage(jsaImg2, "JPEG", 0, 0, 841.89, 595.28, undefined, "FAST");
 
-    // Nombre final (usa Site + Date para que sea consistente)
+    // Nombre final
     const fileName = ("TICKET_JSA_" + (siteInput.value || "SITE") + "_" + (dateInput.value || ""))
       .replace(/\s+/g,"_")
       .toUpperCase();
@@ -2519,6 +2614,7 @@ genPdfBtn.addEventListener("click", async () => {
   }
 });
 
+
   window.addEventListener("DOMContentLoaded", () => {
     buildServiceOptions();
     bg1.src = "bg-page-1.jpg";
@@ -2535,5 +2631,6 @@ genPdfBtn.addEventListener("click", async () => {
 </div>
 </body>
 </html>
+
 
 
