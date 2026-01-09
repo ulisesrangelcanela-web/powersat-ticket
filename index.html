@@ -2639,33 +2639,53 @@ genPdfBtn.addEventListener("click", async () => {
   // Botón azul: TICKET + JSA (3 páginas en 1 PDF)
 genAllPdfBtn.addEventListener("click", async () => {
   try{
-    // 0) Guardar Ticket + JSA completos (si hay login)
+           // 0) Guardar Ticket + JSA completos (si hay login)
 let ticketDocId = "";
 let jsaDocId = "";
 
 try{
+  // Asegura que el JSA esté actualizado desde Ticket (campos + servicio + template + steps)
+  if (typeof window.pushToJSA === "function") window.pushToJSA();
+
+  // Asegura que el preview/steps estén renderizados
+  if (typeof syncPreview === "function") syncPreview();
+
+  // Toma snapshot de JSA (lo que realmente está en el form + steps)
+  const jsaSnapshot = (typeof window.collectJsaData === "function")
+    ? window.collectJsaData()
+    : null;
+
+  // Guarda ticket y EMBEDE el JSA dentro del mismo doc del ticket
   if (typeof window.saveTicketToFirestore === "function") {
     ticketDocId = await window.saveTicketToFirestore({
       action: "GENERATE_TICKET_PLUS_JSA_PDF",
-      pdfType: "COMBO"
-    });
-  }
-
-  if (typeof window.saveJsaToFirestore === "function") {
-    jsaDocId = await window.saveJsaToFirestore({
-      action: "GENERATE_TICKET_PLUS_JSA_PDF",
       pdfType: "COMBO",
-      linkedTicketDocId: ticketDocId || ""
+      jsa: jsaSnapshot || { note: "collectJsaData not available" }
     });
+  } else {
+    throw new Error("saveTicketToFirestore no está disponible.");
   }
 
-  // También actualiza el ticket con link al JSA (opcional pero recomendable)
-  // Esto requiere updateDoc. Si lo quieres, te lo pongo.
+  // (Opcional) también guardarlo en su colección jsaForms
+  // QUITO el if para que si falla, te enteres.
+  if (typeof window.saveJsaToFirestore !== "function") {
+    throw new Error("saveJsaToFirestore NO está disponible en window.");
+  }
+
+  jsaDocId = await window.saveJsaToFirestore({
+    action: "GENERATE_TICKET_PLUS_JSA_PDF",
+    pdfType: "COMBO",
+    linkedTicketDocId: ticketDocId || ""
+  });
+
+  console.log("Saved ticket:", ticketDocId, "Saved jsa:", jsaDocId);
+
 }catch(e){
   alert("FIRESTORE SAVE ERROR (COMBO): " + (e?.message || e));
   console.error(e);
-  // decides si continuar PDF aunque falle guardado
+  // tú decides si continuar PDF aunque falle guardado
 }
+
 
 
     // 1) Captura TICKET como imagen
@@ -2752,6 +2772,7 @@ try{
 </div>
 </body>
 </html>
+
 
 
 
