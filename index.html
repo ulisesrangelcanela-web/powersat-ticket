@@ -579,10 +579,18 @@
       <input id="rtManual" type="text" maxlength="5" inputmode="numeric" />
 
       <div style="margin-top:10px;">
-        <button id="copyTitle" class="btn" style="background:#0057ff;">COPY TITLE</button>
-        <button id="generatePDF" class="btn" style="background:#0a8">GENERATE PDF</button>
-        <button id="fillBtn" class="btn">TRELLO / CALENDAR</button>
+      <!-- BOTÓN MASTER (único que guarda en Firestore) -->
+      <button id="saveCreateBtn" class="btn" style="background:#0a8; width:100%;">
+       SAVE &amp; CREATE PDFs
+      </button>
+
+      <!-- Herramientas (inician bloqueadas) -->
+      <div id="pdfToolsRow" style="margin-top:8px; display:none;">
+      <button id="copyTitle" class="btn" style="background:#0057ff;">COPY TITLE</button>
+      <button id="generatePDF" class="btn" style="background:#0a8">GENERATE TICKET PDF</button>
+      <button id="fillBtn" class="btn">TRELLO / CALENDAR</button>
       </div>
+
     </div>
 
     <div class="panel preview-wrap">
@@ -749,14 +757,18 @@ JOHN D.
 
       <hr />
 
-       <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
-       <button id="jsa_genPdfBtn" class="btn good" type="button">GEN JSA (2PG) PDF</button>
+                 <div id="jsaToolsRow" style="margin-top:10px; display:none; gap:8px; flex-wrap:wrap;">
+  <button id="jsa_genPdfBtn" class="btn good" type="button">GEN JSA (2PG) PDF</button>
+  <button id="genAllPdfBtn" class="btn" type="button" style="background:#0057ff;">
+    GEN TICKET + JSA'S PDF
+  </button>
+</div>
 
-       <button id="genAllPdfBtn" class="btn" type="button" style="background:#0057ff;">
-        GEN TICKET + JSA'S PDF
-       </button>
-     </div>
-     </div> <!-- /panel form -->
+<div class="small" id="jsaLockHint" style="margin-top:6px; color:#444;">
+  Save the ticket first to enable JSA/PDF tools.
+</div>
+</div>
+
 
     <!-- RIGHT PREVIEW -->
     <div class="panel preview-wrap">
@@ -1050,7 +1062,27 @@ JOHN D.
   const locBtn          = document.getElementById('locBtn');
   const manualCoord     = document.getElementById('manualCoord');
 
-                      // ===============================
+
+    const saveCreateBtn  = document.getElementById("saveCreateBtn");
+  const pdfToolsRow    = document.getElementById("pdfToolsRow");
+  const jsaToolsRow    = document.getElementById("jsaToolsRow");
+  const jsaLockHint    = document.getElementById("jsaLockHint");
+  const folioLockHint  = document.getElementById("folioLockHint");
+
+  window.ticketSavedState = window.ticketSavedState || {
+    saved: false,
+    ticketId: "",
+    lastSavedAtISO: ""
+  };
+
+  function setToolsUnlocked(on){
+    if(pdfToolsRow) pdfToolsRow.style.display = on ? "flex" : "none";
+    if(jsaToolsRow) jsaToolsRow.style.display = on ? "flex" : "none";
+    if(jsaLockHint) jsaLockHint.style.display = on ? "none" : "block";
+  }
+
+
+// ===============================
 // FOLIO POOL (PRELOAD + CLAIM)
 // ===============================
 const folioStartEl = document.getElementById("folioStart");
@@ -1353,7 +1385,7 @@ loadSingleBtn?.addEventListener("click", async () => {
 }
 
 
-              async function saveTicketToFirestore(extra = {}){
+  async function saveTicketToFirestore(extra = {}){
   const db = window.firebaseDB;
   const auth = window.firebaseAuth;
 
@@ -1378,59 +1410,88 @@ loadSingleBtn?.addEventListener("click", async () => {
     ...extra,
     uid: user.uid,
     userEmail: user.email || "",
-    createdAt: window.fsServerTimestamp(),
-    clientCreatedAtISO: new Date().toISOString()
+    updatedAt: window.fsServerTimestamp(),
+    clientUpdatedAtISO: new Date().toISOString()
   };
 
   await window.fsRunTransaction(db, async (tx) => {
-    // 1) evita duplicado final
     const tSnap = await tx.get(ticketRef);
-    if(tSnap.exists()){
-      throw new Error(`DUPLICATE ENTRY: Ticket ${ticketId} already exists.`);
+    const fSnap = await tx.get(folioRef);
+
+    // Folio debe existir precargado
+    if(!fSnap.exists()){
+      throw new Error(`FOLIO ${folio} IS NOT PRELOADED. Please load it in the Ticket Book.`);
     }
 
-        // 2) validate folio pool
-const fSnap = await tx.get(folioRef);
-if(!fSnap.exists()){
-  throw new Error(`FOLIO ${folio} IS NOT PRELOADED. Please load it in the Ticket Book.`);
-}
+    const fData = fSnap.data() || {};
+    const claimedBy = (fData.claimedBy || "");
+    const status = (fData.status || "");
 
-const fData = fSnap.data() || {};
+    if(!tSnap.exists()){
+      // === CREATE MODE ===
+      if(status === "USED"){
+        throw new Error(`FOLIO ${folio} HAS ALREADY BEEN USED.`);
+      }
+      if(status !== "CLAIMED"){
+        throw new Error(`FOLIO ${folio} IS NOT CLAIMED. Please press GET NEXT.`);
+      }
+      if(claimedBy !== (user.email || "")){
+        throw new Error(`FOLIO ${folio} IS CLAIMED BY ANOTHER USER: ${claimedBy || "UNKNOWN"}`);
+      }
 
-if(fData.status === "USED"){
-  throw new Error(`FOLIO ${folio} HAS ALREADY BEEN USED.`);
-}
+      tx.set(ticketRef, {
+        ...payload,
+        createdAt: window.fsServerTimestamp(),
+        clientCreatedAtISO: new Date().toISOString()
+      });
 
-if(fData.status !== "CLAIMED"){
-  throw new Error(`FOLIO ${folio} IS NOT CLAIMED. Please press GET NEXT.`);
-}
+      tx.update(folioRef, {
+        status: "USED",
+        usedAt: window.fsServerTimestamp(),
+        ticketId
+      });
 
-// optional: validate that the folio was claimed by the current user
-if((fData.claimedBy || "") !== (user.email || "")){
-  throw new Error(
-    `FOLIO ${folio} IS CLAIMED BY ANOTHER USER: ${fData.claimedBy || "UNKNOWN"}`
-  );
-}
+    } else {
+      // === UPDATE MODE (NO DUPLICATE) ===
+      // Si el folio está USED, debe ser para ESTE ticketId
+      if(status === "USED" && (fData.ticketId || "") !== ticketId){
+        throw new Error(`FOLIO ${folio} IS USED BY ANOTHER TICKET: ${fData.ticketId || "UNKNOWN"}`);
+      }
 
-
-    // 3) crea ticket final
-    tx.set(ticketRef, payload);
-
-    // 4) marca folio USED
-    tx.update(folioRef, {
-      status: "USED",
-      usedAt: window.fsServerTimestamp(),
-      ticketId
-    });
+      // Merge update del ticket
+      tx.set(ticketRef, payload, { merge:true });
+    }
   });
+
+  //  Estado global SIEMPRE se actualiza aquí (no en el botón)
+  window.ticketSavedState = window.ticketSavedState || {};
+  window.ticketSavedState.saved = true;
+  window.ticketSavedState.ticketId = ticketId;
+  window.ticketSavedState.lastSavedAtISO = new Date().toISOString();
 
   return ticketId;
 }
 
-
-
-// Exponer para el botón COMBO en Project 2
+// Exponer para otros módulos
 window.saveTicketToFirestore = saveTicketToFirestore;
+
+  saveCreateBtn?.addEventListener("click", async () => {
+  try{
+    const ticketId = await window.saveTicketToFirestore({
+      action: window.ticketSavedState?.saved ? "UPDATE_BASE" : "SAVE_BASE"
+    });
+
+    saveCreateBtn.textContent = "EDIT & CREATE PDFs";
+    setToolsUnlocked(true);
+
+    alert("SAVED:\n" + ticketId);
+  }catch(err){
+    alert("SAVE ERROR: " + (err?.message || err));
+    console.error(err);
+  }
+});
+
+
 
 
   const folioOverlay        = document.getElementById('folioOverlay');
@@ -2186,25 +2247,20 @@ function downloadBlob(blob, fileNameNoExt){
   setTimeout(() => URL.revokeObjectURL(url), 1500);
 }
 
-generatePDF.addEventListener("click", async () => {
+            generatePDF.addEventListener("click", async () => {
   try{
-    // Genera primero para tener fileName (y que overlays estén sincronizados)
+    if(!window.ticketSavedState?.saved){
+      alert("SAVE FIRST: Use SAVE & CREATE PDFs to back up the ticket before generating PDFs.");
+      return;
+    }
     const { blob, fileName } = await generateTicketPdfBlob();
-
-    // Guarda TODO el ticket + metadata del PDF
-    const saveId = await saveTicketToFirestore({
-      action: "GENERATE_TICKET_PDF",
-      pdfType: "TICKET",
-      pdfName: fileName + ".pdf"
-    });
-
     downloadBlob(blob, fileName);
-    console.log("Saved ticket doc:", saveId);
   }catch(err){
-    alert("SAVE/PDF ERROR: " + (err?.message || err));
+    alert("PDF ERROR: " + (err?.message || err));
     console.error(err);
   }
 });
+
 
 
 
@@ -3185,6 +3241,7 @@ genAllPdfBtn.addEventListener("click", async () => {
       jsa: jsaSnapshot || { note: "collectJsaData not available" }
     });
 
+
     console.log("Saved COMBO in serviceTickets doc:", ticketDocId);
 
     // 5) Descargar / abrir PDF
@@ -3223,11 +3280,5 @@ genAllPdfBtn.addEventListener("click", async () => {
 </div>
 </body>
 </html>
-
-
-
-
-
-
 
 
