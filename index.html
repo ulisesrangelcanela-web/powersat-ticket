@@ -409,6 +409,29 @@
          style="flex:1; min-width:220px; padding:9px 10px; border:1px solid #ddd; border-radius:6px; box-sizing:border-box; text-transform:uppercase; font-size:13px; font-weight:500;" />
 </div>
 
+       <div style="margin-top:6px; padding:10px; border:1px dashed #c9d6ff; border-radius:8px;">
+  <div style="font-weight:700; font-size:12px; letter-spacing:.4px; color:#335;">
+    TICKET BOOK (PRELOAD FOLIOS)
+  </div>
+
+  <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
+    <input id="folioStart" type="text" inputmode="numeric" placeholder="START (e.g. 60150)"
+           style="flex:1; min-width:150px; padding:9px 10px; border:1px solid #ddd; border-radius:6px;" />
+    <input id="folioEnd" type="text" inputmode="numeric" placeholder="END (e.g. 60175)"
+           style="flex:1; min-width:150px; padding:9px 10px; border:1px solid #ddd; border-radius:6px;" />
+  </div>
+
+  <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
+    <button id="loadFolioRangeBtn" type="button" class="btn" style="background:#2b6;">LOAD RANGE</button>
+    <button id="loadSingleFolioBtn" type="button" class="btn" style="background:#2b6;">LOAD SINGLE (START)</button>
+    <button id="claimNextFolioBtn" type="button" class="btn" style="background:#0057ff;">GET NEXT AVAILABLE</button>
+  </div>
+
+  <div id="folioPoolMsg" style="margin-top:8px; font-size:12px; color:#333; white-space:pre-wrap;"></div>
+</div>
+
+
+       
 
 
       <label>FOLIO</label>
@@ -700,7 +723,7 @@ JOHN D.
   </div>
 </section>
 
-  <script type="module">
+      <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
 
   import {
@@ -713,34 +736,46 @@ JOHN D.
   import {
     getFirestore,
     collection,
+    doc,
+    setDoc,
+    getDoc,
     addDoc,
-    serverTimestamp
+    serverTimestamp,
+    runTransaction,
+    writeBatch
   } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
   const firebaseConfig = {
-  apiKey:  "AIzaSyCb-m5x7LN3fLn8gn7EO923DXw-3qjTx4A",
-  authDomain: "authenticationpsat.firebaseapp.com",
-  projectId: "authenticationpsat",
-  storageBucket: "authenticationpsat.appspot.com",
-  messagingSenderId: "739826148130",
-  appId: "1:739826148130:web:76fbe29bc62ff715cb3b7b"
-};
+    apiKey:  "AIzaSyCb-m5x7LN3fLn8gn7EO923DXw-3qjTx4A",
+    authDomain: "authenticationpsat.firebaseapp.com",
+    projectId: "authenticationpsat",
+    storageBucket: "authenticationpsat.appspot.com",
+    messagingSenderId: "739826148130",
+    appId: "1:739826148130:web:76fbe29bc62ff715cb3b7b"
+  };
 
-
-  const app = initializeApp(firebaseConfig);
+  const app  = initializeApp(firebaseConfig);
   const auth = getAuth(app);
-  const db = getFirestore(app);
+  const db   = getFirestore(app);
 
+  // Exponer Firestore helpers que usas en scripts normales
   window.firebaseDB = db;
-  window.fsAddDoc = addDoc;
   window.fsCollection = collection;
+  window.fsDoc = doc;
+  window.fsSetDoc = setDoc;
+  window.fsGetDoc = getDoc;
+  window.fsAddDoc = addDoc;
   window.fsServerTimestamp = serverTimestamp;
+  window.fsRunTransaction = runTransaction;
+  window.fsWriteBatch = writeBatch;
 
+  // Exponer Auth helpers
   window.firebaseAuth = auth;
   window.onAuthStateChanged = onAuthStateChanged;
   window.signInWithEmailAndPassword = signInWithEmailAndPassword;
   window.signOutFirebase = () => signOut(auth);
 </script>
+
 
 
   <script>
@@ -930,6 +965,230 @@ JOHN D.
   const locBtn          = document.getElementById('locBtn');
   const manualCoord     = document.getElementById('manualCoord');
 
+                      // ===============================
+// FOLIO POOL (PRELOAD + CLAIM)
+// ===============================
+const folioStartEl = document.getElementById("folioStart");
+const folioEndEl   = document.getElementById("folioEnd");
+const loadRangeBtn = document.getElementById("loadFolioRangeBtn");
+const loadSingleBtn= document.getElementById("loadSingleFolioBtn");
+const claimNextBtn = document.getElementById("claimNextFolioBtn");
+const poolMsgEl    = document.getElementById("folioPoolMsg");
+
+function poolMsg(s){ poolMsgEl.textContent = s || ""; }
+
+function onlyDigits(v){ return String(v||"").replace(/\D/g,""); }
+
+function makeSessionId(){
+  // sesión simple: no es “security”, es trazabilidad
+  return "S_" + Date.now() + "_" + Math.random().toString(16).slice(2);
+}
+const claimSessionId = makeSessionId();
+
+async function ensureLogged(){
+  const auth = window.firebaseAuth;
+  if(!auth?.currentUser) throw new Error("No hay usuario logueado.");
+  return auth.currentUser;
+}
+
+function folioDocRef(uid, folio){
+  const db = window.firebaseDB;
+  return window.fsDoc(db, "ticketPools", uid, "folios", String(folio));
+}
+
+async function preloadFoliosRange(start, end){
+  const user = await ensureLogged();
+  const s = parseInt(start,10);
+  const e = parseInt(end,10);
+  if(!Number.isFinite(s) || !Number.isFinite(e)) throw new Error("Start/End inválidos.");
+  if(e < s) throw new Error("END no puede ser menor que START.");
+  if((e - s + 1) > 500) throw new Error("Rango muy grande. Cárgalo por bloques (máx 500).");
+
+  const db = window.firebaseDB;
+  const batch = window.fsWriteBatch(db);
+
+  let created = 0;
+  for(let n=s; n<=e; n++){
+    const ref = folioDocRef(user.uid, n);
+    // set con merge=true para NO pisar si ya existe y está USED/CLAIMED
+    batch.set(ref, {
+      folio: String(n),
+      status: "AVAILABLE",
+      createdAt: window.fsServerTimestamp(),
+      createdBy: user.email || ""
+    }, { merge: true });
+    created++;
+  }
+
+  await batch.commit();
+  return created;
+}
+
+async function preloadSingleFromStart(){
+  const start = onlyDigits(folioStartEl.value);
+  if(!start) throw new Error("Captura START.");
+  const c = await preloadFoliosRange(start, start);
+  return c;
+}
+
+/**
+ * Claim específico (si quieres permitir que el técnico elija un folio exacto)
+ */
+async function claimSpecificFolio(folioNumber){
+  const user = await ensureLogged();
+  const db = window.firebaseDB;
+  const ref = folioDocRef(user.uid, folioNumber);
+
+  const claimed = await window.fsRunTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    if(!snap.exists()) throw new Error(`FOLIO ${folioNumber} NO ESTÁ PRECARGADO.`);
+    const data = snap.data() || {};
+    if(data.status === "USED") throw new Error(`FOLIO ${folioNumber} YA FUE USADO.`);
+    if(data.status === "CLAIMED") throw new Error(`FOLIO ${folioNumber} YA ESTÁ APARTADO (CLAIMED).`);
+
+    tx.update(ref, {
+      status: "CLAIMED",
+      claimedAt: window.fsServerTimestamp(),
+      claimedBy: user.email || "",
+      claimSessionId
+    });
+
+    return String(folioNumber);
+  });
+
+  return claimed;
+}
+
+/**
+ * Claim “NEXT AVAILABLE”: para hacerlo bien sin query dentro de tx
+ * usamos un doc “pointer” nextFolio (contador) y trabajamos secuencial.
+ *
+ * Esto te garantiza “uno por uno” en orden, sin duplicates.
+ */
+async function claimNextAvailableSequential(){
+  const user = await ensureLogged();
+  const db = window.firebaseDB;
+  const pointerRef = window.fsDoc(db, "ticketPools", user.uid);
+
+  const folio = await window.fsRunTransaction(db, async (tx) => {
+    const pSnap = await tx.get(pointerRef);
+    const pData = pSnap.exists() ? (pSnap.data()||{}) : {};
+
+    let next = parseInt(pData.nextFolio || "0", 10);
+    if(!Number.isFinite(next) || next <= 0){
+      throw new Error("No hay nextFolio configurado. Primero precarga un rango y define START como nextFolio.");
+    }
+
+    // buscamos el próximo AVAILABLE a partir del pointer (scan acotado)
+    // scan max 200 para no colgarte si hay huecos.
+    for(let i=0; i<200; i++){
+      const candidate = next + i;
+      const fRef = folioDocRef(user.uid, candidate);
+      const fSnap = await tx.get(fRef);
+
+      if(!fSnap.exists()){
+        // si no existe, saltamos (no está precargado)
+        continue;
+      }
+      const fData = fSnap.data() || {};
+      if(fData.status === "AVAILABLE"){
+        // lo apartamos
+        tx.update(fRef, {
+          status: "CLAIMED",
+          claimedAt: window.fsServerTimestamp(),
+          claimedBy: user.email || "",
+          claimSessionId
+        });
+
+        // movemos pointer al siguiente número (candidate+1)
+        tx.set(pointerRef, {
+          nextFolio: String(candidate + 1),
+          updatedAt: window.fsServerTimestamp(),
+          updatedBy: user.email || ""
+        }, { merge: true });
+
+        return String(candidate);
+      }
+
+      // si está USED/CLAIMED, seguimos
+    }
+
+    throw new Error("No encontré folios AVAILABLE a partir del pointer (¿ya se acabaron o no están precargados?).");
+  });
+
+  return folio;
+}
+
+/**
+ * Al precargar un rango, si NO existe nextFolio, lo inicializamos con START.
+ */
+async function initPointerIfMissing(start){
+  const user = await ensureLogged();
+  const db = window.firebaseDB;
+  const pointerRef = window.fsDoc(db, "ticketPools", user.uid);
+
+  await window.fsRunTransaction(db, async (tx) => {
+    const snap = await tx.get(pointerRef);
+    const data = snap.exists() ? (snap.data()||{}) : {};
+    if(data.nextFolio) return; // ya existe
+    tx.set(pointerRef, {
+      nextFolio: String(start),
+      createdAt: window.fsServerTimestamp(),
+      createdBy: user.email || ""
+    }, { merge: true });
+  });
+}
+
+async function setFolioInputLocked(folio){
+  folioInput.value = String(folio);
+  folioInput.readOnly = true;
+  folioInput.style.background = "#eef3ff";
+  window.ticketSyncOverlays?.();
+}
+
+// Botones
+loadRangeBtn?.addEventListener("click", async () => {
+  try{
+    poolMsg("");
+    const s = onlyDigits(folioStartEl.value);
+    const e = onlyDigits(folioEndEl.value);
+    if(!s || !e) throw new Error("Captura START y END.");
+    const created = await preloadFoliosRange(s, e);
+    await initPointerIfMissing(s);
+    poolMsg(`OK: precargados/confirmados ${created} folios.\nPointer inicial: ${s} (si no existía).`);
+  }catch(err){
+    poolMsg("ERROR: " + (err?.message || err));
+  }
+});
+
+loadSingleBtn?.addEventListener("click", async () => {
+  try{
+    poolMsg("");
+    const s = onlyDigits(folioStartEl.value);
+    if(!s) throw new Error("Captura START.");
+    const created = await preloadFoliosRange(s, s);
+    await initPointerIfMissing(s);
+    poolMsg(`OK: precargado folio ${s}.`);
+  }catch(err){
+    poolMsg("ERROR: " + (err?.message || err));
+  }
+});
+
+claimNextBtn?.addEventListener("click", async () => {
+  try{
+    poolMsg("");
+    const folio = await claimNextAvailableSequential();
+    await setFolioInputLocked(folio);
+    poolMsg(`CLAIM OK: usando folio ${folio}.`);
+  }catch(err){
+    poolMsg("ERROR: " + (err?.message || err));
+  }
+});
+
+
+
+
+
 
   function collectTicketData(){
   // Asegura WC actualizado según servicio
@@ -983,31 +1242,73 @@ JOHN D.
 }
 
 
-               async function saveTicketToFirestore(extra = {}){
+              async function saveTicketToFirestore(extra = {}){
   const db = window.firebaseDB;
   const auth = window.firebaseAuth;
 
   if(!db) throw new Error("Firestore no inicializado.");
   if(!auth?.currentUser) throw new Error("No hay usuario logueado.");
 
+  const user = auth.currentUser;
   const data = collectTicketData();
+
+  const folio = String((data.folio || "").trim());
+  const st = String((data.stateCode || "").trim().toUpperCase());
+
+  if(!/^\d{1,5}$/.test(folio)) throw new Error("FOLIO inválido (1 a 5 dígitos).");
+  if(st.length < 2) throw new Error("STATE CODE inválido (ej: NM, TX).");
+
+  const ticketId = `${st}-${folio}`;                 // ID ÚNICO
+  const ticketRef = window.fsDoc(db, "serviceTickets", ticketId);
+  const folioRef  = folioDocRef(user.uid, folio);    // folio pool
 
   const payload = {
     ...data,
     ...extra,
-    uid: auth.currentUser.uid,
-    userEmail: auth.currentUser.email || "",
+    uid: user.uid,
+    userEmail: user.email || "",
     createdAt: window.fsServerTimestamp(),
     clientCreatedAtISO: new Date().toISOString()
   };
 
-  const ref = await window.fsAddDoc(
-    window.fsCollection(db, "serviceTickets"),
-    payload
-  );
+  await window.fsRunTransaction(db, async (tx) => {
+    // 1) evita duplicado final
+    const tSnap = await tx.get(ticketRef);
+    if(tSnap.exists()){
+      throw new Error(`DUPLICADO: ya existe ticket ${ticketId} en la base de datos.`);
+    }
 
-  return ref.id;
+    // 2) valida folio pool
+    const fSnap = await tx.get(folioRef);
+    if(!fSnap.exists()){
+      throw new Error(`FOLIO ${folio} NO ESTÁ PRECARGADO. (Cárgalo en Ticket Book).`);
+    }
+    const fData = fSnap.data() || {};
+    if(fData.status === "USED"){
+      throw new Error(`FOLIO ${folio} YA FUE USADO.`);
+    }
+    if(fData.status !== "CLAIMED"){
+      throw new Error(`FOLIO ${folio} NO ESTÁ APARTADO (CLAIMED). Presiona GET NEXT AVAILABLE.`);
+    }
+    // opcional: validar que lo reclamaste tú
+    if((fData.claimedBy || "") !== (user.email || "")){
+      throw new Error(`FOLIO ${folio} está CLAIMED por otro usuario: ${fData.claimedBy || "UNKNOWN"}`);
+    }
+
+    // 3) crea ticket final
+    tx.set(ticketRef, payload);
+
+    // 4) marca folio USED
+    tx.update(folioRef, {
+      status: "USED",
+      usedAt: window.fsServerTimestamp(),
+      ticketId
+    });
+  });
+
+  return ticketId;
 }
+
 
 
 // Exponer para el botón COMBO en Project 2
@@ -2792,12 +3093,5 @@ genAllPdfBtn.addEventListener("click", async () => {
 </div>
 </body>
 </html>
-
-
-
-
-
-
-
 
 
