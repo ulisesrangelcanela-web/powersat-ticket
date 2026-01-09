@@ -1968,15 +1968,52 @@ if(mLatDec && mLonDec){
   const lockHint = document.getElementById("ticket_jsaLockHint");
   if(lockHint) slot.appendChild(lockHint);
 }
+     function mountSaveBtnIntoJsaSticky(){
+  const slot = document.querySelector("#jsaApp #jsaStickyToolsSlot");
+  const saveBtn = document.getElementById("saveCreateBtn");
+
+  if(!slot){
+    console.warn("[MOUNT] No existe #jsaStickyToolsSlot todavía.");
+    return;
+  }
+  if(!saveBtn){
+    console.warn("[MOUNT] No existe #saveCreateBtn.");
+    return;
+  }
+
+  // Mueve el botón (append/prepend lo “arranca” de donde esté)
+  slot.prepend(saveBtn);
+
+  // Estilo full width
+  saveBtn.style.width = "100%";
+  saveBtn.style.marginTop = "0";
+
+  console.log("[MOUNT] SAVE BUTTON moved into JSA sticky slot ✅");
+}
 
 
-  window.addEventListener("DOMContentLoaded", () => {
+
+
+  function mountNow(){
   buildServiceOptions();
   pushToJSA();
   syncOverlays();
 
-  mountJsaToolsIntoJsaForm(); // <<--- AGREGA ESTA LÍNEA
-});
+  mountJsaToolsIntoJsaForm();
+  mountSaveBtnIntoJsaSticky();
+
+  // DEBUG (para confirmar que sí corrió)
+  console.log("[MOUNT] saveCreateBtn parent =", document.getElementById("saveCreateBtn")?.parentElement);
+  console.log("[MOUNT] slot =", document.getElementById("jsaStickyToolsSlot"));
+}
+
+// Si el DOM ya está listo, corre ya. Si no, espera.
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", mountNow, { once:true });
+} else {
+  mountNow();
+}
+
 
 
   customerInput.addEventListener('focus', e => e.target.select());
