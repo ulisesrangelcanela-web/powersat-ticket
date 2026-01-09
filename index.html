@@ -579,22 +579,50 @@
       <input id="rtManual" type="text" maxlength="5" inputmode="numeric" />
 
       <div style="margin-top:10px;">
-      <!-- BOTÓN MASTER (único que guarda en Firestore) -->
-      <button id="saveCreateBtn" class="btn" style="background:#0a8; width:100%;">
-       SAVE &amp; CREATE PDFs
+
+  <!-- BOTÓN MASTER -->
+  <button id="saveCreateBtn" class="btn" style="background:#0a8; width:100%;">
+    SAVE &amp; CREATE PDFs
+  </button>
+
+  <!-- HERRAMIENTAS (aparecen tras guardar) -->
+  <div id="toolsPanel" style="margin-top:8px; display:none; flex-direction:column; gap:8px;">
+
+    <!-- Row 1: Ticket tools -->
+    <div id="pdfToolsRow" style="display:flex; gap:8px; flex-wrap:wrap;">
+      <button id="copyTitle" class="btn" type="button" style="background:#0057ff; flex:1; min-width:140px;">
+        COPY TITLE
       </button>
+      <button id="generatePDF" class="btn" type="button" style="background:#0a8; flex:1; min-width:180px;">
+        GENERATE TICKET PDF
+      </button>
+      <button id="fillBtn" class="btn" type="button" style="background:#0057ff; flex:1; min-width:160px;">
+        TRELLO / CALENDAR
+      </button>
+    </div>
 
-      <!-- Herramientas (inician bloqueadas) -->
-      <div id="pdfToolsRow" style="margin-top:8px; display:none;">
-      <button id="copyTitle" class="btn" style="background:#0057ff;">COPY TITLE</button>
-      <button id="generatePDF" class="btn" style="background:#0a8">GENERATE TICKET PDF</button>
-      <button id="fillBtn" class="btn">TRELLO / CALENDAR</button>
-      </div>
+    <!-- Row 2: JSA tools -->
+    <div id="jsaToolsRow" style="display:flex; gap:8px; flex-wrap:wrap;">
+      <button id="jsa_genPdfBtn" class="btn" type="button" style="background:#0a8; flex:1; min-width:160px;">
+        GEN JSA (2PG) PDF
+      </button>
+      <button id="genAllPdfBtn" class="btn" type="button" style="background:#0057ff; flex:1; min-width:180px;">
+        GEN TICKET + JSA'S PDF
+      </button>
+    </div>
 
-    </div><!-- END .panel.form -->
+    <div class="small" id="ticket_jsaLockHint" style="margin-top:2px; color:#444; display:none;">
+  Save the ticket first to enable JSA/PDF tools.
+                 </div>
 
+       </div><!-- /toolsPanel -->
 
-    <div class="panel preview-wrap">
+     </div><!--  CIERRA el div margin-top -->
+
+      </div><!--  CIERRA .panel.form -->
+
+       <!--  AHORA sí, fuera del form panel, va el preview -->
+<div class="panel preview-wrap">
       <div id="ticketCanvas" class="ticket-canvas">
         <img id="ticketImg" class="ticket-bg" src="formatoOriginal.jpeg" crossorigin="anonymous" />
 
@@ -758,20 +786,13 @@ JOHN D.
 
       <hr />
 
-                 <div id="jsaToolsRow" style="margin-top:10px; display:none; gap:8px; flex-wrap:wrap;">
-  <button id="jsa_genPdfBtn" class="btn good" type="button">GEN JSA (2PG) PDF</button>
-  <button id="genAllPdfBtn" class="btn" type="button" style="background:#0057ff;">
-    GEN TICKET + JSA'S PDF
-  </button>
-</div>
-
-<div class="small" id="jsaLockHint" style="margin-top:6px; color:#444;">
-  Save the ticket first to enable JSA/PDF tools.
-</div>
-</div>
+      <div class="small" id="jsaLockHint" style="margin-top:6px; color:#444;">
+        Save the ticket first to enable JSA/PDF tools.
+      </div>
+    </div> <!-- END .panel.form -->
 
 
-    <!-- RIGHT PREVIEW -->
+        <!-- RIGHT PREVIEW -->
     <div class="panel preview-wrap">
       <div class="tabs">
         <div id="jsa_tabP1" class="tab active">PAGE 1 (REVIEW FORM)</div>
@@ -817,9 +838,11 @@ JOHN D.
         <div id="jsa_ov_taskP2" class="overlay"></div>
         <div id="jsa_ov_stepsBlock" class="overlay"></div>
       </div>
-    </div>
-  </div>
-</section>
+    </div> <!-- END .panel.preview-wrap -->
+
+  </div> <!-- END .container -->
+</section> <!-- END #jsaApp -->
+
 
       <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
@@ -1067,7 +1090,8 @@ JOHN D.
     const saveCreateBtn  = document.getElementById("saveCreateBtn");
   const pdfToolsRow    = document.getElementById("pdfToolsRow");
   const jsaToolsRow    = document.getElementById("jsaToolsRow");
-  const jsaLockHint    = document.getElementById("jsaLockHint");
+  const jsaLockHint = document.getElementById("ticket_jsaLockHint");
+
   const folioLockHint  = document.getElementById("folioLockHint");
 
   window.ticketSavedState = window.ticketSavedState || {
@@ -1076,11 +1100,17 @@ JOHN D.
     lastSavedAtISO: ""
   };
 
-  function setToolsUnlocked(on){
-    if(pdfToolsRow) pdfToolsRow.style.display = on ? "flex" : "none";
-    if(jsaToolsRow) jsaToolsRow.style.display = on ? "flex" : "none";
-    if(jsaLockHint) jsaLockHint.style.display = on ? "none" : "block";
-  }
+  const toolsPanel = document.getElementById("toolsPanel");
+
+function setToolsUnlocked(on){
+  if(toolsPanel) toolsPanel.style.display = on ? "flex" : "none";
+  if(pdfToolsRow) pdfToolsRow.style.display = on ? "flex" : "none";
+  if(jsaToolsRow) jsaToolsRow.style.display = on ? "flex" : "none";
+  if(jsaLockHint) jsaLockHint.style.display = on ? "none" : "block";
+}
+
+
+
 
 
 // ===============================
@@ -1478,19 +1508,31 @@ window.saveTicketToFirestore = saveTicketToFirestore;
 
   saveCreateBtn?.addEventListener("click", async () => {
   try{
-    const ticketId = await window.saveTicketToFirestore({
-      action: window.ticketSavedState?.saved ? "UPDATE_BASE" : "SAVE_BASE"
-    });
+    // Si no está guardado: guarda y abre herramientas
+    if(!window.ticketSavedState?.saved){
+      const ticketId = await window.saveTicketToFirestore({
+        action: "SAVE_BASE"
+      });
 
-    saveCreateBtn.textContent = "EDIT & CREATE PDFs";
-    setToolsUnlocked(true);
+      saveCreateBtn.textContent = "EDIT & CREATE PDFs";
+      setToolsUnlocked(true);
+      alert("SAVED:\n" + ticketId);
+      return;
+    }
 
-    alert("SAVED:\n" + ticketId);
+    // Si ya está guardado: toggle mostrar/ocultar tools (sin re-guardar)
+    const panel = document.getElementById("toolsPanel");
+    if(panel){
+      const isHidden = (panel.style.display === "none" || panel.style.display === "");
+      panel.style.display = isHidden ? "flex" : "none";
+    }
+
   }catch(err){
     alert("SAVE ERROR: " + (err?.message || err));
     console.error(err);
   }
 });
+
 
 
 
