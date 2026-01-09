@@ -2625,15 +2625,43 @@ async function captureJsaPagesAsImages(){
 }
 
 
-// Botón verde: solo JSA
+// Botón verde: JSA -> guarda en Firestore + genera PDF
 genPdfBtn.addEventListener("click", async () => {
   try{
+    // 1) Asegura que Ticket->JSA esté sincronizado (si vienes del ticket)
+    if (typeof window.pushToJSA === "function") window.pushToJSA();
+
+    // 2) Asegura overlays/steps renderizados antes de guardar
+    if (typeof syncPreview === "function") syncPreview();
+
+    // 3) Calcula el nombre del PDF (igual lógica que en generateJsaPdf)
+    const pdfName = ("JSA_" + (siteInput.value || "SITE") + "_" + (dateInput.value || ""))
+      .replace(/\s+/g, "_")
+      .toUpperCase() + ".pdf";
+
+    // 4) Guarda en Firestore (jsaForms)
+    if (typeof window.saveJsaToFirestore !== "function") {
+      throw new Error("saveJsaToFirestore NO está disponible en window.");
+    }
+
+    const jsaDocId = await window.saveJsaToFirestore({
+      action: "GENERATE_JSA_PDF",
+      pdfType: "JSA_2PG",
+      pdfName
+    });
+
+    console.log("Saved JSA doc:", jsaDocId, "pdfName:", pdfName);
+
+    // 5) Genera y descarga el PDF
     await generateJsaPdf();
+
   }catch(err){
-    alert("PDF ERROR: " + (err?.message || err));
+    alert("JSA SAVE/PDF ERROR: " + (err?.message || err));
     console.error(err);
   }
 });
+
+
 
 
   // Botón azul: TICKET + JSA (3 páginas en 1 PDF)
@@ -2772,6 +2800,7 @@ try{
 </div>
 </body>
 </html>
+
 
 
 
