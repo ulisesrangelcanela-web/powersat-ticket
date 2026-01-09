@@ -932,32 +932,56 @@ JOHN D.
 
 
   function collectTicketData(){
+  // Asegura WC actualizado según servicio
+  // (solo por seguridad)
+  // updateWCByService();  // si lo llamas aquí, ten cuidado de no pisar N/C manual; tú lo controlas con change
+  syncOverlays();
+
   const srvOpt = serviceSelect.options[serviceSelect.selectedIndex];
+
+  const wcRaw = (wcInput.value || "").trim().toUpperCase();
+  const wcNormalized = (!wcRaw || wcRaw === "N/C" || wcRaw === "NC") ? "N/C" : wcRaw;
+
   return {
     type: "ticket",
+
     folio: (folioInput.value || "").trim(),
     stateCode: (stateCodeInput.value || "").trim().toUpperCase(),
+
     customer: (customerInput.value || "").trim().toUpperCase(),
     rig: (rigInput.value || "").trim().toUpperCase(),
     well: (wellInput.value || "").trim().toUpperCase(),
     parishCounty: (parishInput.value || "").trim().toUpperCase(),
-    date: dateInput.value || "",
 
+    date: dateInput.value || "",
     tech: (techInput.value || "").trim().toUpperCase(),
 
     serviceCode: (serviceSelect.value || "").trim(),
     serviceLabel: srvOpt ? (srvOpt.dataset.label || "") : "",
+    servicePrice: srvOpt ? (srvOpt.dataset.price || "") : "",
 
     comments: (descInput.value || "").trim().toUpperCase(),
-    wc: (wcInput.value || "").trim().toUpperCase(),
+
+    wc: wcNormalized,
     arrival: aInput.value || "",
     departure: dInput.value || "",
 
     hqCoords: (hqAddr.value || "").trim(),
     jobCoords: (workAddr.value || "").trim(),
-    rtMiles: (rtManual.value || "").trim()
+    rtMiles: (rtManual.value || "").trim(),
+
+    // auditoría exacta de lo impreso
+    overlays: {
+      dateMDY: dateOverlay.textContent || "",
+      wcOverlay: wcOverlay.textContent || "",
+      aOverlay: aOverlay.textContent || "",
+      dOverlay: dOverlay.textContent || "",
+      rtOverlay: rtOverlay.textContent || "",
+      serviceOverlay: serviceTypeOverlay.textContent || ""
+    }
   };
 }
+
 
 async function saveTicketToFirestore(extra = {}){
   const db = window.firebaseDB;
@@ -1730,22 +1754,26 @@ function downloadBlob(blob, fileNameNoExt){
   setTimeout(() => URL.revokeObjectURL(url), 1500);
 }
 
-// Botón verde Project1: sigue funcionando normal (solo Ticket)
 generatePDF.addEventListener("click", async () => {
   try{
-    // 1) Guarda registro en Firestore
-    const saveId = await saveTicketToFirestore({ action: "GENERATE_TICKET_PDF" });
-
-    // 2) Genera PDF
+    // Genera primero para tener fileName (y que overlays estén sincronizados)
     const { blob, fileName } = await generateTicketPdfBlob();
-    downloadBlob(blob, fileName);
 
+    // Guarda TODO el ticket + metadata del PDF
+    const saveId = await saveTicketToFirestore({
+      action: "GENERATE_TICKET_PDF",
+      pdfType: "TICKET",
+      pdfName: fileName + ".pdf"
+    });
+
+    downloadBlob(blob, fileName);
     console.log("Saved ticket doc:", saveId);
   }catch(err){
     alert("SAVE/PDF ERROR: " + (err?.message || err));
     console.error(err);
   }
 });
+
 
 
 
@@ -2084,6 +2112,85 @@ window.addEventListener("DOMContentLoaded", pushToJSA);
   const leaderCompany = document.getElementById("jsa_leaderCompany");
   const teamNames = document.getElementById("jsa_teamNames");
   const completeSelect = document.getElementById("jsa_completeSelect");
+
+
+  function collectJsaData(){
+  const code = (serviceSelect.value || "").trim();
+  const opt = serviceSelect.options[serviceSelect.selectedIndex];
+
+  // El "modelo final" de steps ya formado (esto es lo que realmente se imprime)
+  const stepsBlockFinal = (textToStepsBlock(STEPS_RAW) || "").toUpperCase();
+
+  return {
+    type: "jsa",
+    jsaServiceCode: code,
+    jsaServiceLabel: opt ? (opt.dataset.label || opt.textContent || "") : "",
+
+    company: (companyInput.value || "").trim().toUpperCase(),
+    site: (siteInput.value || "").trim().toUpperCase(),
+    date: (dateInput.value || ""), // yyyy-mm-dd
+
+    task: (taskInput.value || "").trim().toUpperCase(),
+    injury: (injuryInput.value || "").trim().toUpperCase(),
+
+    refReviewed: (refReviewed.value || "").trim().toUpperCase(),  // YES / NA
+    refAttach: (refAttach.value || "").trim().toUpperCase(),
+
+    riskModify: (riskModify.value || "").trim().toUpperCase(),    // YES / NO
+    riskRemains: (riskRemains.value || "").trim().toUpperCase(),  // YES / NO
+
+    ppePreset: (ppePreset.value || "").trim().toUpperCase(),
+    ppeOther: (ppeOther.value || "").trim().toUpperCase(),
+
+    reviewerName: (reviewerName.value || "").trim().toUpperCase(),
+    reviewerCompany: (reviewerCompany.value || "").trim().toUpperCase(),
+    leaderName: (leaderName.value || "").trim().toUpperCase(),
+    leaderCompany: (leaderCompany.value || "").trim().toUpperCase(),
+    teamNames: (teamNames.value || "").trim().toUpperCase(),
+
+    completePg2: (completeSelect.value || "").trim().toUpperCase(), // BLANK/NO/YES
+
+    // Guardamos ambas representaciones:
+    // 1) cruda (editable) 2) final (render exacto en PDF)
+    stepsRaw: (STEPS_RAW || ""),
+    stepsBlockFinal
+  };
+}
+
+async function saveJsaToFirestore(extra = {}){
+  const db = window.firebaseDB;
+  const auth = window.firebaseAuth;
+
+  if(!db) throw new Error("Firestore no inicializado (window.firebaseDB).");
+  if(!auth?.currentUser) throw new Error("No hay usuario logueado.");
+
+  // IMPORTANTE: asegurar que defaults/templates ya estén aplicados
+  syncPreview();
+
+  const data = collectJsaData();
+
+  const payload = {
+    ...data,
+    ...extra,
+    uid: auth.currentUser.uid,
+    userEmail: auth.currentUser.email || "",
+    createdAt: window.fsServerTimestamp(),
+    clientCreatedAtISO: new Date().toISOString()
+  };
+
+  const ref = await window.fsAddDoc(
+    window.fsCollection(db, "jsaForms"),
+    payload
+  );
+
+  return ref.id;
+}
+
+// opcional: exponer para uso cruzado
+window.saveJsaToFirestore = saveJsaToFirestore;
+window.collectJsaData = collectJsaData;
+
+  
 
   const genPdfBtn = document.getElementById("jsa_genPdfBtn");
   const genAllPdfBtn = document.getElementById("genAllPdfBtn");
@@ -2532,21 +2639,34 @@ genPdfBtn.addEventListener("click", async () => {
   // Botón azul: TICKET + JSA (3 páginas en 1 PDF)
 genAllPdfBtn.addEventListener("click", async () => {
   try{
-    // 0) Guardar ticket en Firestore (si existe función expuesta y hay login)
-    let saveId = "";
-    if (typeof window.saveTicketToFirestore === "function") {
-      try{
-        saveId = await window.saveTicketToFirestore({ action: "GENERATE_TICKET_PLUS_JSA_PDF" });
-        console.log("Saved ticket doc:", saveId);
-      }catch(e){
-        alert("FIRESTORE SAVE ERROR (COMBO): " + (e?.message || e));
-        console.error(e);
-        // Si quieres que aún así genere el PDF aunque falle el guardado, lo dejamos continuar.
-        // return;
-      }
-    } else {
-      console.warn("window.saveTicketToFirestore no existe.");
-    }
+    // 0) Guardar Ticket + JSA completos (si hay login)
+let ticketDocId = "";
+let jsaDocId = "";
+
+try{
+  if (typeof window.saveTicketToFirestore === "function") {
+    ticketDocId = await window.saveTicketToFirestore({
+      action: "GENERATE_TICKET_PLUS_JSA_PDF",
+      pdfType: "COMBO"
+    });
+  }
+
+  if (typeof window.saveJsaToFirestore === "function") {
+    jsaDocId = await window.saveJsaToFirestore({
+      action: "GENERATE_TICKET_PLUS_JSA_PDF",
+      pdfType: "COMBO",
+      linkedTicketDocId: ticketDocId || ""
+    });
+  }
+
+  // También actualiza el ticket con link al JSA (opcional pero recomendable)
+  // Esto requiere updateDoc. Si lo quieres, te lo pongo.
+}catch(e){
+  alert("FIRESTORE SAVE ERROR (COMBO): " + (e?.message || e));
+  console.error(e);
+  // decides si continuar PDF aunque falle guardado
+}
+
 
     // 1) Captura TICKET como imagen
     const ticketCanvasEl = document.getElementById("ticketCanvas");
@@ -2632,6 +2752,7 @@ genAllPdfBtn.addEventListener("click", async () => {
 </div>
 </body>
 </html>
+
 
 
 
