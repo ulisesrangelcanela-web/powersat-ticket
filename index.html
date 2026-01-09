@@ -518,7 +518,7 @@
 </div>
 
 <div class="small" id="folioLockHint" style="margin-top:6px;">
-  Folio se asigna automáticamente. No se puede escribir manualmente.
+  Folio is automatically assigned. Manual input is not allowed
 </div>
 
 
@@ -1080,49 +1080,54 @@ function folioDocRef(uid, folio){
   const db = window.firebaseDB;
   return window.fsDoc(db, "ticketPools", uid, "folios", String(folio));
 }
-
-       async function preloadFoliosRange(start, end){
+               async function preloadFoliosRange(start, end){
   const user = await ensureLogged();
   const s = parseInt(start,10);
   const e = parseInt(end,10);
 
-  if(!Number.isFinite(s) || !Number.isFinite(e)) throw new Error("Start/End inválidos.");
-  if(e < s) throw new Error("END no puede ser menor que START.");
-  if((e - s + 1) > 500) throw new Error("Rango muy grande. Cárgalo por bloques (máx 500).");
+  if(!Number.isFinite(s) || !Number.isFinite(e)) throw new Error("Invalid Start/End.");
+  if(e < s) throw new Error("END cannot be lower than START.");
+  if((e - s + 1) > 500) throw new Error("Range too large. Load in blocks (max 500).");
 
   const db = window.firebaseDB;
-
   let created = 0;
-  // Para evitar demasiadas operaciones en 1 sola transacción, lo hacemos en batches pequeños
+
   const CHUNK = 50;
 
   for(let base = s; base <= e; base += CHUNK){
     const top = Math.min(e, base + CHUNK - 1);
 
-    await window.fsRunTransaction(db, async (tx) => {
-      for(let n = base; n <= top; n++){
-        const ref = folioDocRef(user.uid, n);
-        const snap = await tx.get(ref);
+    // 1) LECTURAS fuera de batch
+    const refs = [];
+    for(let n = base; n <= top; n++){
+      refs.push(folioDocRef(user.uid, n));
+    }
 
-        if(!snap.exists()){
-          // SOLO si no existe, lo creamos como AVAILABLE
-          tx.set(ref, {
-            folio: String(n),
-            status: "AVAILABLE",
-            createdAt: window.fsServerTimestamp(),
-            createdBy: user.email || ""
-          });
-          created++;
-        } else {
-          // Si ya existe, NO tocamos status (ni CLAIMED ni USED)
-          // opcional: podrías actualizar metadata si quieres, pero NO status
-        }
+    const snaps = await Promise.all(refs.map(r => window.fsGetDoc(r)));
+
+    // 2) batch sólo para los que NO existen
+    const batch = window.fsWriteBatch(db);
+
+    snaps.forEach((snap, idx) => {
+      if(!snap.exists()){
+        const ref = refs[idx];
+        const folioNum = base + idx;
+        batch.set(ref, {
+          folio: String(folioNum),
+          status: "AVAILABLE",
+          createdAt: window.fsServerTimestamp(),
+          createdBy: user.email || ""
+        });
+        created++;
       }
     });
+
+    await batch.commit();
   }
 
   return created;
 }
+
 
 
 async function preloadSingleFromStart(){
@@ -1266,6 +1271,7 @@ const claimNextBtn = document.getElementById("claimNextFolioBtn");
 
 claimNextBtn?.addEventListener("click", async () => {
   try{
+
     poolMsg("");
     const folio = await claimNextAvailableSequential();
     await setFolioInputLocked(folio);
@@ -1291,26 +1297,7 @@ loadSingleBtn?.addEventListener("click", async () => {
     poolMsg("ERROR: " + (err?.message || err));
   }
 });
-                  const claimNextBtn = document.getElementById("claimNextFolioBtn");
-
-claimNextBtn?.addEventListener("click", async () => {
-  try{
-    poolMsg("");
-    const folio = await claimNextAvailableSequential();
-    await setFolioInputLocked(folio);
-    poolMsg(`OK: FOLIO CLAIMED = ${folio}`);
-    // opcional: cerrar el collapsible
-    document.getElementById("ticketBookBox")?.removeAttribute("open");
-  }catch(err){
-    poolMsg("ERROR: " + (err?.message || err));
-    console.error(err);
-  }
-});
-
-
-
-
-
+                 
 
 
 
@@ -3236,3 +3223,6 @@ genAllPdfBtn.addEventListener("click", async () => {
 </div>
 </body>
 </html>
+
+
+
