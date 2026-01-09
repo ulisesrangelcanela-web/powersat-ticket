@@ -1142,7 +1142,8 @@ function setToolsUnlocked(on){
   if(jsaToolsRow) jsaToolsRow.style.display = on ? "flex" : "none";
   if(jsaLockHint) jsaLockHint.style.display = on ? "none" : "block";
 }
-
+// Al iniciar: SIEMPRE ocultar herramientas hasta que se guarde
+setToolsUnlocked(false);
 
 
 
