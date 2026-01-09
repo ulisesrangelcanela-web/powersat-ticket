@@ -699,6 +699,136 @@ JOHN D.
   </div>
 </section>
 
+  <script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+  import {
+    getAuth,
+    onAuthStateChanged,
+    signInWithEmailAndPassword,
+    signOut
+  } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCb-m5x7LN3fLn8gn7EO923DXw-3qjTx4A",
+    authDomain: "authenticationpsat.firebaseapp.com",
+    projectId: "authenticationpsat",
+    storageBucket: "authenticationpsat.firebasestorage.app",
+    messagingSenderId: "739826148130",
+    appId: "1:739826148130:web:76fbe29bc62ff715cb3b7b"
+    // measurementId NO es necesario para Auth
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+
+  // Exponer a tus scripts normales (no-module)
+  window.firebaseAuth = auth;
+  window.onAuthStateChanged = onAuthStateChanged;
+  window.signInWithEmailAndPassword = signInWithEmailAndPassword;
+  window.signOutFirebase = () => signOut(auth);
+</script>
+
+  <script>
+(function(){
+  const gate   = document.getElementById("authGate");
+  const shell  = document.getElementById("appShell");
+  const topbar = document.getElementById("authTopbar");
+  const whoami = document.getElementById("whoami");
+
+  const emailEl = document.getElementById("loginEmail");
+  const passEl  = document.getElementById("loginPass");
+  const btnIn   = document.getElementById("authBtn");
+  const btnOut  = document.getElementById("logoutBtn");
+  const errBox  = document.getElementById("authErr");
+
+  function showErr(msg){
+    errBox.textContent = msg || "";
+  }
+
+  function showApp(user){
+    gate.style.display = "none";
+    shell.style.display = "block";
+    topbar.style.display = "block";
+    whoami.textContent = user?.email ? ("LOGGED AS: " + user.email) : "LOGGED IN";
+  }
+
+  function showGate(){
+    gate.style.display = "flex";
+    shell.style.display = "none";
+    topbar.style.display = "none";
+    whoami.textContent = "";
+  }
+
+  // Espera a que el module haya expuesto funciones
+  function waitFirebaseReady(){
+    return (window.firebaseAuth && window.onAuthStateChanged && window.signInWithEmailAndPassword);
+  }
+
+  function mapAuthError(e){
+    const code = (e && e.code) ? e.code : "";
+    if(code === "auth/invalid-email") return "EMAIL INVALIDO.";
+    if(code === "auth/missing-password") return "FALTA PASSWORD.";
+    if(code === "auth/invalid-credential" || code === "auth/wrong-password") return "CREDENCIALES INCORRECTAS.";
+    if(code === "auth/user-disabled") return "USUARIO DESHABILITADO.";
+    if(code === "auth/user-not-found") return "USUARIO NO EXISTE.";
+    if(code === "auth/too-many-requests") return "MUCHOS INTENTOS. ESPERA Y VUELVE A INTENTAR.";
+    if(code === "auth/unauthorized-domain") return "DOMINIO NO AUTORIZADO EN FIREBASE AUTH (ver paso 2).";
+    return (code ? (code + " ") : "") + (e?.message || "ERROR");
+  }
+
+  // Reintenta hasta que el módulo esté listo
+  const t = setInterval(() => {
+    if(!waitFirebaseReady()) return;
+    clearInterval(t);
+
+    // Estado de auth
+    window.onAuthStateChanged(window.firebaseAuth, (user) => {
+      showErr("");
+      if(user) showApp(user);
+      else showGate();
+    });
+
+    // Login
+    btnIn.addEventListener("click", async () => {
+      showErr("");
+      const email = (emailEl.value || "").trim();
+      const pass  = (passEl.value || "").trim();
+      if(!email || !pass){
+        showErr("CAPTURA EMAIL Y PASSWORD.");
+        return;
+      }
+      try{
+        await window.signInWithEmailAndPassword(window.firebaseAuth, email, pass);
+      }catch(e){
+        showErr(mapAuthError(e));
+        console.error(e);
+      }
+    });
+
+    // Enter en password
+    passEl.addEventListener("keydown", (ev) => {
+      if(ev.key === "Enter") btnIn.click();
+    });
+
+    // Logout
+    btnOut.addEventListener("click", async () => {
+      try{
+        await window.signOutFirebase();
+      }catch(e){
+        showErr(mapAuthError(e));
+        console.error(e);
+      }
+    });
+
+  }, 50);
+})();
+</script>
+
+
+
+
+  
+
 <script>
 /* ============================================================
    PROJECT 1 JS (encapsulado para evitar choques)
@@ -2404,3 +2534,4 @@ genPdfBtn.addEventListener("click", async () => {
 </div>
 </body>
 </html>
+
