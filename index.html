@@ -163,6 +163,72 @@
   #ticketApp #trelloModal .modal-box { width: 85%; max-width: 310px; margin-top: 20px; padding: 10px; }
   #ticketApp #trelloModal textarea { height: 160px; font-size: 14px; }
 }
+   /* ===== FOLIO ROW (small input + button right) ===== */
+#ticketApp .folioRow{
+  display:flex;
+  gap:8px;
+  align-items:center;
+}
+
+#ticketApp #folioInput{
+  width:120px;         /* más pequeña */
+  max-width:120px;
+  text-align:center;
+  letter-spacing:1px;
+  font-weight:800;
+  background:#eef3ff;  /* se ve “lock” */
+}
+
+#ticketApp #folioInput[readonly]{
+  cursor:not-allowed;
+}
+
+#ticketApp .folioBtn{
+  flex:1;
+  min-width:120px;
+  background:#0057ff;
+  white-space:nowrap;
+}
+
+/* ===== Collapsible Ticket Book ===== */
+#ticketApp details.collapsible{
+  border:1px dashed #c9d6ff;
+  border-radius:8px;
+  background:#fbfcff;
+  padding:8px 10px;
+}
+
+#ticketApp details.collapsible > summary{
+  list-style:none;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  user-select:none;
+}
+
+#ticketApp details.collapsible > summary::-webkit-details-marker{
+  display:none;
+}
+
+#ticketApp .collapsibleTitle{
+  font-weight:800;
+  font-size:12px;
+  letter-spacing:.4px;
+  color:#335;
+}
+
+#ticketApp .collapsibleHint{
+  font-size:11px;
+  color:#667;
+}
+
+#ticketApp .collapsibleBody{
+  padding-top:6px;
+}
+
+
 </style>
 
 <!-- =========================
@@ -409,33 +475,52 @@
          style="flex:1; min-width:220px; padding:9px 10px; border:1px solid #ddd; border-radius:6px; box-sizing:border-box; text-transform:uppercase; font-size:13px; font-weight:500;" />
 </div>
 
-       <div style="margin-top:6px; padding:10px; border:1px dashed #c9d6ff; border-radius:8px;">
-  <div style="font-weight:700; font-size:12px; letter-spacing:.4px; color:#335;">
-    TICKET BOOK (PRELOAD FOLIOS)
-  </div>
+            <details id="ticketBookBox" class="collapsible" style="margin-top:6px;">
+  <summary class="collapsibleSummary">
+    <span class="collapsibleTitle">TICKET BOOK (PRELOAD FOLIOS)</span>
+    <span class="collapsibleHint">ABRIR / CERRAR</span>
+  </summary>
 
-  <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
-    <input id="folioStart" type="text" inputmode="numeric" placeholder="START (e.g. 60150)"
-           style="flex:1; min-width:150px; padding:9px 10px; border:1px solid #ddd; border-radius:6px;" />
-    <input id="folioEnd" type="text" inputmode="numeric" placeholder="END (e.g. 60175)"
-           style="flex:1; min-width:150px; padding:9px 10px; border:1px solid #ddd; border-radius:6px;" />
-  </div>
+  <div class="collapsibleBody">
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
+      <input id="folioStart" type="text" inputmode="numeric" placeholder="START (e.g. 60150)"
+             style="flex:1; min-width:150px; padding:9px 10px; border:1px solid #ddd; border-radius:6px;" />
+      <input id="folioEnd" type="text" inputmode="numeric" placeholder="END (e.g. 60175)"
+             style="flex:1; min-width:150px; padding:9px 10px; border:1px solid #ddd; border-radius:6px;" />
+    </div>
 
-  <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
-    <button id="loadFolioRangeBtn" type="button" class="btn" style="background:#2b6;">LOAD RANGE</button>
-    <button id="loadSingleFolioBtn" type="button" class="btn" style="background:#2b6;">LOAD SINGLE (START)</button>
-    <button id="claimNextFolioBtn" type="button" class="btn" style="background:#0057ff;">GET NEXT AVAILABLE</button>
-  </div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
+      <button id="loadFolioRangeBtn" type="button" class="btn" style="background:#2b6;">LOAD RANGE</button>
+      <button id="loadSingleFolioBtn" type="button" class="btn" style="background:#2b6;">LOAD SINGLE (START)</button>
+    </div>
 
-  <div id="folioPoolMsg" style="margin-top:8px; font-size:12px; color:#333; white-space:pre-wrap;"></div>
-</div>
+    <div id="folioPoolMsg" style="margin-top:8px; font-size:12px; color:#333; white-space:pre-wrap;"></div>
+  </div>
+</details>
+
 
 
        
 
 
       <label>FOLIO</label>
-      <input id="folioInput" type="text" maxlength="5" inputmode="numeric" />
+
+<div class="folioRow">
+  <input id="folioInput"
+         type="text"
+         maxlength="5"
+         inputmode="numeric"
+         placeholder="AUTO"
+         readonly
+         aria-readonly="true" />
+
+  <button id="claimNextFolioBtn" type="button" class="btn folioBtn">GET NEXT</button>
+</div>
+
+<div class="small" id="folioLockHint" style="margin-top:6px;">
+  Folio se asigna automáticamente. No se puede escribir manualmente.
+</div>
+
 
       <label>STATE CODE</label>
       <input id="stateCodeInput" type="text" maxlength="3" />
@@ -972,7 +1057,7 @@ const folioStartEl = document.getElementById("folioStart");
 const folioEndEl   = document.getElementById("folioEnd");
 const loadRangeBtn = document.getElementById("loadFolioRangeBtn");
 const loadSingleBtn= document.getElementById("loadSingleFolioBtn");
-const claimNextBtn = document.getElementById("claimNextFolioBtn");
+
 const poolMsgEl    = document.getElementById("folioPoolMsg");
 
 function poolMsg(s){ poolMsgEl.textContent = s || ""; }
@@ -996,33 +1081,49 @@ function folioDocRef(uid, folio){
   return window.fsDoc(db, "ticketPools", uid, "folios", String(folio));
 }
 
-async function preloadFoliosRange(start, end){
+       async function preloadFoliosRange(start, end){
   const user = await ensureLogged();
   const s = parseInt(start,10);
   const e = parseInt(end,10);
+
   if(!Number.isFinite(s) || !Number.isFinite(e)) throw new Error("Start/End inválidos.");
   if(e < s) throw new Error("END no puede ser menor que START.");
   if((e - s + 1) > 500) throw new Error("Rango muy grande. Cárgalo por bloques (máx 500).");
 
   const db = window.firebaseDB;
-  const batch = window.fsWriteBatch(db);
 
   let created = 0;
-  for(let n=s; n<=e; n++){
-    const ref = folioDocRef(user.uid, n);
-    // set con merge=true para NO pisar si ya existe y está USED/CLAIMED
-    batch.set(ref, {
-      folio: String(n),
-      status: "AVAILABLE",
-      createdAt: window.fsServerTimestamp(),
-      createdBy: user.email || ""
-    }, { merge: true });
-    created++;
+  // Para evitar demasiadas operaciones en 1 sola transacción, lo hacemos en batches pequeños
+  const CHUNK = 50;
+
+  for(let base = s; base <= e; base += CHUNK){
+    const top = Math.min(e, base + CHUNK - 1);
+
+    await window.fsRunTransaction(db, async (tx) => {
+      for(let n = base; n <= top; n++){
+        const ref = folioDocRef(user.uid, n);
+        const snap = await tx.get(ref);
+
+        if(!snap.exists()){
+          // SOLO si no existe, lo creamos como AVAILABLE
+          tx.set(ref, {
+            folio: String(n),
+            status: "AVAILABLE",
+            createdAt: window.fsServerTimestamp(),
+            createdBy: user.email || ""
+          });
+          created++;
+        } else {
+          // Si ya existe, NO tocamos status (ni CLAIMED ni USED)
+          // opcional: podrías actualizar metadata si quieres, pero NO status
+        }
+      }
+    });
   }
 
-  await batch.commit();
   return created;
 }
+
 
 async function preloadSingleFromStart(){
   const start = onlyDigits(folioStartEl.value);
@@ -1156,10 +1257,27 @@ loadRangeBtn?.addEventListener("click", async () => {
     const created = await preloadFoliosRange(s, e);
     await initPointerIfMissing(s);
     poolMsg(`OK: precargados/confirmados ${created} folios.\nPointer inicial: ${s} (si no existía).`);
+    document.getElementById("ticketBookBox")?.removeAttribute("open");
   }catch(err){
     poolMsg("ERROR: " + (err?.message || err));
   }
 });
+const claimNextBtn = document.getElementById("claimNextFolioBtn");
+
+claimNextBtn?.addEventListener("click", async () => {
+  try{
+    poolMsg("");
+    const folio = await claimNextAvailableSequential();
+    await setFolioInputLocked(folio);
+    poolMsg(`OK: FOLIO CLAIMED = ${folio}`);
+    // opcional: cerrar el collapsible
+    document.getElementById("ticketBookBox")?.removeAttribute("open");
+  }catch(err){
+    poolMsg("ERROR: " + (err?.message || err));
+    console.error(err);
+  }
+});
+
 
 loadSingleBtn?.addEventListener("click", async () => {
   try{
@@ -1173,17 +1291,23 @@ loadSingleBtn?.addEventListener("click", async () => {
     poolMsg("ERROR: " + (err?.message || err));
   }
 });
+                  const claimNextBtn = document.getElementById("claimNextFolioBtn");
 
 claimNextBtn?.addEventListener("click", async () => {
   try{
     poolMsg("");
     const folio = await claimNextAvailableSequential();
     await setFolioInputLocked(folio);
-    poolMsg(`CLAIM OK: usando folio ${folio}.`);
+    poolMsg(`OK: FOLIO CLAIMED = ${folio}`);
+    // opcional: cerrar el collapsible
+    document.getElementById("ticketBookBox")?.removeAttribute("open");
   }catch(err){
     poolMsg("ERROR: " + (err?.message || err));
+    console.error(err);
   }
 });
+
+
 
 
 
@@ -1275,25 +1399,32 @@ claimNextBtn?.addEventListener("click", async () => {
     // 1) evita duplicado final
     const tSnap = await tx.get(ticketRef);
     if(tSnap.exists()){
-      throw new Error(`DUPLICADO: ya existe ticket ${ticketId} en la base de datos.`);
+      throw new Error(`DUPLICATE ENTRY: Ticket ${ticketId} already exists.`);
     }
 
-    // 2) valida folio pool
-    const fSnap = await tx.get(folioRef);
-    if(!fSnap.exists()){
-      throw new Error(`FOLIO ${folio} NO ESTÁ PRECARGADO. (Cárgalo en Ticket Book).`);
-    }
-    const fData = fSnap.data() || {};
-    if(fData.status === "USED"){
-      throw new Error(`FOLIO ${folio} YA FUE USADO.`);
-    }
-    if(fData.status !== "CLAIMED"){
-      throw new Error(`FOLIO ${folio} NO ESTÁ APARTADO (CLAIMED). Presiona GET NEXT AVAILABLE.`);
-    }
-    // opcional: validar que lo reclamaste tú
-    if((fData.claimedBy || "") !== (user.email || "")){
-      throw new Error(`FOLIO ${folio} está CLAIMED por otro usuario: ${fData.claimedBy || "UNKNOWN"}`);
-    }
+        // 2) validate folio pool
+const fSnap = await tx.get(folioRef);
+if(!fSnap.exists()){
+  throw new Error(`FOLIO ${folio} IS NOT PRELOADED. Please load it in the Ticket Book.`);
+}
+
+const fData = fSnap.data() || {};
+
+if(fData.status === "USED"){
+  throw new Error(`FOLIO ${folio} HAS ALREADY BEEN USED.`);
+}
+
+if(fData.status !== "CLAIMED"){
+  throw new Error(`FOLIO ${folio} IS NOT CLAIMED. Please press GET NEXT.`);
+}
+
+// optional: validate that the folio was claimed by the current user
+if((fData.claimedBy || "") !== (user.email || "")){
+  throw new Error(
+    `FOLIO ${folio} IS CLAIMED BY ANOTHER USER: ${fData.claimedBy || "UNKNOWN"}`
+  );
+}
+
 
     // 3) crea ticket final
     tx.set(ticketRef, payload);
@@ -1837,7 +1968,19 @@ const jsaServiceSelect = document.getElementById("jsa_serviceSelect");
     }
   });
 
-  folioInput.addEventListener('input', () => forceDigitsMax(folioInput, 5));
+                // FOLIO: bloqueado (solo por GET NEXT)
+folioInput.addEventListener("keydown", (e) => {
+  // permite Tab para navegar
+  if(e.key === "Tab") return;
+  e.preventDefault();
+});
+
+folioInput.addEventListener("paste", (e) => e.preventDefault());
+folioInput.addEventListener("input", () => {
+  // si algo intentó cambiarlo, lo regresamos al valor actual (solo lectura)
+  folioInput.value = (folioInput.value || "").replace(/\D/g,"").slice(0,5);
+});
+
   rtManual.addEventListener('input', () => forceDigitsMax(rtManual, 5));
   rtManual.addEventListener("input", () => { rtManual.dataset.autofilled = "false"; });
 
@@ -3093,5 +3236,3 @@ genAllPdfBtn.addEventListener("click", async () => {
 </div>
 </body>
 </html>
-
-
