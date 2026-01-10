@@ -923,16 +923,21 @@ JOHN D.
   } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
 
   import {
-    getFirestore,
-    collection,
-    doc,
-    setDoc,
-    getDoc,
-    addDoc,
-    serverTimestamp,
-    runTransaction,
-    writeBatch
-  } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+  getFirestore,
+  collection,
+  doc,
+  setDoc,
+  getDoc,
+  addDoc,
+  serverTimestamp,
+  runTransaction,
+  writeBatch,
+  query,
+  where,
+  getDocs,
+  limit
+} from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+
 
   const firebaseConfig = {
     apiKey:  "AIzaSyCb-m5x7LN3fLn8gn7EO923DXw-3qjTx4A",
@@ -957,6 +962,10 @@ JOHN D.
   window.fsServerTimestamp = serverTimestamp;
   window.fsRunTransaction = runTransaction;
   window.fsWriteBatch = writeBatch;
+  window.fsQuery = query;
+  window.fsWhere = where;
+  window.fsGetDocs = getDocs;
+  window.fsLimit = limit;
 
   // Exponer Auth helpers
   window.firebaseAuth = auth;
@@ -1207,6 +1216,29 @@ function makeSessionId(){
 }
 const claimSessionId = makeSessionId();
 
+async function findMyClaimedFolio(){
+  const user = await ensureLogged();
+  const db = window.firebaseDB;
+
+  const col = window.fsCollection(db, "ticketPools", user.uid, "folios");
+
+  // Dos filtros de igualdad + limit(1) normalmente NO pide índice compuesto.
+  const q = window.fsQuery(
+    col,
+    window.fsWhere("status", "==", "CLAIMED"),
+    window.fsWhere("claimedBy", "==", (user.email || "")),
+    window.fsLimit(1)
+  );
+
+  const snap = await window.fsGetDocs(q);
+  if(snap.empty) return "";
+
+  // El docId es el folio (porque lo guardas como String(folio))
+  return snap.docs[0].id;
+}
+
+
+
 async function ensureLogged(){
   const auth = window.firebaseAuth;
   if(!auth?.currentUser) throw new Error("No hay usuario logueado.");
@@ -1408,18 +1440,29 @@ const claimNextBtn = document.getElementById("claimNextFolioBtn");
 
 claimNextBtn?.addEventListener("click", async () => {
   try{
-
     poolMsg("");
+
+    // 1) Si ya tengo un folio CLAIMED, lo reutilizo y NO reclamo otro
+    const existing = await findMyClaimedFolio();
+    if(existing){
+      await setFolioInputLocked(existing);
+      poolMsg(`OK: YOU ALREADY HAVE A CLAIMED FOLIO = ${existing}\n(Use SAVE to finalize or RELEASE to discard)`);
+      document.getElementById("ticketBookBox")?.removeAttribute("open");
+      return;
+    }
+
+    // 2) Si no hay pendiente, ahora sí reclamo el siguiente
     const folio = await claimNextAvailableSequential();
     await setFolioInputLocked(folio);
     poolMsg(`OK: FOLIO CLAIMED = ${folio}`);
-    // opcional: cerrar el collapsible
     document.getElementById("ticketBookBox")?.removeAttribute("open");
+
   }catch(err){
     poolMsg("ERROR: " + (err?.message || err));
     console.error(err);
   }
 });
+
 
 
 loadSingleBtn?.addEventListener("click", async () => {
@@ -2023,15 +2066,38 @@ function mountNow(){
   buildServiceOptions();
   pushToJSA();
   syncOverlays();
-
   mountSaveBtnIntoJsaSticky();
+  resumeClaimedFolioOnLoad(); // no hace falta await
 }
 
+async function resumeClaimedFolioOnLoad(){
+  try{
+    // esperar a que haya user (hasta ~6s)
+    for(let i=0; i<60; i++){
+      if(window.firebaseAuth?.currentUser) break;
+      await new Promise(r => setTimeout(r, 100));
+    }
+    if(!window.firebaseAuth?.currentUser) return;
+
+    const existing = await findMyClaimedFolio();
+    if(existing){
+      await setFolioInputLocked(existing);
+      poolMsg(`RESUMED: CLAIMED FOLIO = ${existing}`);
+    }
+  }catch(e){
+    console.warn("resumeClaimedFolioOnLoad:", e);
+  }
+}
+
+// Montaje inicial (una sola vez)
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", mountNow, { once:true });
 } else {
   mountNow();
 }
+
+
+
 
 
 
