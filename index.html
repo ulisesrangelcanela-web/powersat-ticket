@@ -228,7 +228,36 @@
   padding-top:6px;
 }
 
+/* ===== TOOLS PANEL: layout EXACTO como imagen 2 ===== */
+  #ticketApp #toolsPanel{
+    display: none;                 /* JS lo prende */
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
 
+  /* Hace que los hijos “salgan” al grid aunque estén dentro de pdfToolsRow/jsaToolsRow */
+  #ticketApp #pdfToolsRow,
+  #ticketApp #jsaToolsRow{
+    display: contents;
+  }
+
+  /* Quita efectos de flex/min-width inline y fuerza que llenen su celda */
+  #ticketApp #toolsPanel .btn{
+    width: 100% !important;
+    min-width: 0 !important;
+    margin-top: 0 !important;
+  }
+
+  /* FILA 1 */
+  #ticketApp #copyTitle{     grid-column: 1; grid-row: 1; }
+  #ticketApp #genAllPdfBtn{  grid-column: 2; grid-row: 1; }
+
+  /* FILA 2 */
+  #ticketApp #generatePDF{   grid-column: 1; grid-row: 2; }
+  #ticketApp #jsa_genPdfBtn{ grid-column: 2; grid-row: 2; }
+
+  /* FILA 3 (ancho completo) */
+  #ticketApp #fillBtn{       grid-column: 1 / -1; grid-row: 3; }
 </style>
 
 <!-- =========================
@@ -611,7 +640,8 @@
   </button>
 
   <!-- HERRAMIENTAS (aparecen tras guardar) -->
-  <div id="toolsPanel" style="margin-top:8px; display:none; flex-direction:column; gap:8px;">
+  <div id="toolsPanel" style="margin-top:8px;">
+
 
     <!-- Row 1: Ticket tools -->
     <div id="pdfToolsRow" style="display:flex; gap:8px; flex-wrap:wrap;">
@@ -1137,11 +1167,16 @@ JOHN D.
   const toolsPanel = document.getElementById("toolsPanel");
 
 function setToolsUnlocked(on){
-  if(toolsPanel) toolsPanel.style.display = on ? "flex" : "none";
-  if(pdfToolsRow) pdfToolsRow.style.display = on ? "flex" : "none";
-  if(jsaToolsRow) jsaToolsRow.style.display = on ? "flex" : "none";
+  if(toolsPanel) toolsPanel.style.display = on ? "grid" : "none";
+
+  // IMPORTANTE: estos 2 rows ya NO los vamos a “prender/apagar” con flex,
+  // porque los convertiremos a display:contents para que el grid los acomode.
+  if(pdfToolsRow) pdfToolsRow.style.display = "contents";
+  if(jsaToolsRow) jsaToolsRow.style.display = "contents";
+
   if(jsaLockHint) jsaLockHint.style.display = on ? "none" : "block";
 }
+
 // Al iniciar: SIEMPRE ocultar herramientas hasta que se guarde
 setToolsUnlocked(false);
 
@@ -1559,7 +1594,9 @@ window.saveTicketToFirestore = saveTicketToFirestore;
     const panel = document.getElementById("toolsPanel");
     if(panel){
       const isHidden = (panel.style.display === "none" || panel.style.display === "");
-      panel.style.display = isHidden ? "flex" : "none";
+      setToolsUnlocked(isHidden);
+
+
     }
 
   }catch(err){
@@ -1938,94 +1975,60 @@ if(mLatDec && mLonDec){
     
   
   
-   window.ticketSyncOverlays = syncOverlays;
+  // deja esta línea donde ya la tienes
+window.ticketSyncOverlays = syncOverlays;
 
-  function computeAndMaybeSetRT(changedByWorkAddr=false){
-    const work = parseLatLon(workAddr.value);
-    if(!work) return;
-    const hq = parseLatLon(hqAddr.value);
-    if(!hq) return;
+// ====== pega aquí tus funciones SOLO en JS ======
+function computeAndMaybeSetRT(changedByWorkAddr = false) {
+  const work = parseLatLon(workAddr.value);
+  if (!work) return;
 
-    const milesOneWay = haversineMiles(hq.lat, hq.lon, work.lat, work.lon);
-    const ROAD_FACTOR = 1.4;
-    const milesRT = Math.round(milesOneWay * ROAD_FACTOR * 2);
+  const hq = parseLatLon(hqAddr.value);
+  if (!hq) return;
 
-    if (changedByWorkAddr) rtManual.dataset.autofilled = "true";
-    if (rtManual.dataset.autofilled !== "false") {
-      rtManual.value = String(milesRT);
-      syncOverlays();
-    }
+  const milesOneWay = haversineMiles(hq.lat, hq.lon, work.lat, work.lon);
+  const ROAD_FACTOR = 1.4;
+  const milesRT = Math.round(milesOneWay * ROAD_FACTOR * 2);
+
+  if (changedByWorkAddr) rtManual.dataset.autofilled = "true";
+
+  if (rtManual.dataset.autofilled !== "false") {
+    rtManual.value = String(milesRT);
+    syncOverlays();
   }
-
-  function mountJsaToolsIntoJsaForm(){
-  const slot = document.getElementById("jsaStickyToolsSlot");
-  const row  = document.getElementById("jsaToolsRow");
-  if(!slot || !row) return;
-
-  // Mueve el row completo (con sus botones e IDs intactos)
-  slot.appendChild(row);
-
-  // Opcional: también mover el hint de "Save first" debajo del row
-  const lockHint = document.getElementById("ticket_jsaLockHint");
-  if(lockHint) slot.appendChild(lockHint);
 }
-     function mountSaveBtnIntoJsaSticky(){
+
+function mountSaveBtnIntoJsaSticky() {
   const slot = document.querySelector("#jsaApp #jsaStickyToolsSlot");
   const saveBtn = document.getElementById("saveCreateBtn");
   const toolsPanel = document.getElementById("toolsPanel");
 
-  if(!slot){
-    console.warn("[MOUNT] No existe #jsaStickyToolsSlot todavía.");
-    return;
-  }
-  if(!saveBtn){
-    console.warn("[MOUNT] No existe #saveCreateBtn.");
-    return;
-  }
-  if(!toolsPanel){
-    console.warn("[MOUNT] No existe #toolsPanel.");
-    return;
-  }
+  if (!slot || !saveBtn || !toolsPanel) return;
 
-  // 1) Mueve SAVE al sticky (arriba)
   slot.prepend(saveBtn);
-
-  // 2) Mueve toolsPanel debajo del SAVE (para que los botones queden ahí mismo)
   slot.appendChild(toolsPanel);
 
-  // Estilos
   saveBtn.style.width = "100%";
   saveBtn.style.marginTop = "0";
 
   toolsPanel.style.marginTop = "8px";
-  toolsPanel.style.display = "none"; // asegúralo oculto hasta que se guarde
-
-  console.log("[MOUNT] SAVE + TOOLS moved into JSA sticky slot ✅");
+  toolsPanel.style.display = "none";
 }
 
-
-
-
-
-  function mountNow(){
+function mountNow(){
   buildServiceOptions();
   pushToJSA();
   syncOverlays();
 
-  mountJsaToolsIntoJsaForm();
   mountSaveBtnIntoJsaSticky();
-
-  // DEBUG (para confirmar que sí corrió)
-  console.log("[MOUNT] saveCreateBtn parent =", document.getElementById("saveCreateBtn")?.parentElement);
-  console.log("[MOUNT] slot =", document.getElementById("jsaStickyToolsSlot"));
 }
 
-// Si el DOM ya está listo, corre ya. Si no, espera.
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", mountNow, { once:true });
 } else {
   mountNow();
 }
+
 
 
 
