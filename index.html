@@ -229,35 +229,36 @@
 }
 
 /* ===== TOOLS PANEL: layout EXACTO como imagen 2 ===== */
-  #ticketApp #toolsPanel{
-    display: none;                 /* JS lo prende */
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-  }
+#toolsPanel{
+  display: none;                 /* JS lo prende con display:grid */
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
 
-  /* Hace que los hijos “salgan” al grid aunque estén dentro de pdfToolsRow/jsaToolsRow */
-  #ticketApp #pdfToolsRow,
-  #ticketApp #jsaToolsRow{
-    display: contents;
-  }
+/* Hace que los hijos “salgan” al grid aunque estén dentro de pdfToolsRow/jsaToolsRow */
+#toolsPanel #pdfToolsRow,
+#toolsPanel #jsaToolsRow{
+  display: contents !important;
+}
 
-  /* Quita efectos de flex/min-width inline y fuerza que llenen su celda */
-  #ticketApp #toolsPanel .btn{
-    width: 100% !important;
-    min-width: 0 !important;
-    margin-top: 0 !important;
-  }
+/* Fuerza que cada botón llene su celda del grid (mata min-width/flex inline) */
+#toolsPanel .btn{
+  width: 100% !important;
+  min-width: 0 !important;
+  margin-top: 0 !important;
+}
 
-  /* FILA 1 */
-  #ticketApp #copyTitle{     grid-column: 1; grid-row: 1; }
-  #ticketApp #genAllPdfBtn{  grid-column: 2; grid-row: 1; }
+/* FILA 1 */
+#copyTitle{     grid-column: 1; grid-row: 1; }
+#genAllPdfBtn{  grid-column: 2; grid-row: 1; }
 
-  /* FILA 2 */
-  #ticketApp #generatePDF{   grid-column: 1; grid-row: 2; }
-  #ticketApp #jsa_genPdfBtn{ grid-column: 2; grid-row: 2; }
+/* FILA 2 */
+#generatePDF{   grid-column: 1; grid-row: 2; }
+#jsa_genPdfBtn{ grid-column: 2; grid-row: 2; }
 
-  /* FILA 3 (ancho completo) */
-  #ticketApp #fillBtn{       grid-column: 1 / -1; grid-row: 3; }
+/* FILA 3 (ancho completo) */
+#fillBtn{       grid-column: 1 / -1; grid-row: 3; }
+
 </style>
 
 <!-- =========================
