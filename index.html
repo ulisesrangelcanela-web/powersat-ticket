@@ -1972,6 +1972,7 @@ if(mLatDec && mLonDec){
      function mountSaveBtnIntoJsaSticky(){
   const slot = document.querySelector("#jsaApp #jsaStickyToolsSlot");
   const saveBtn = document.getElementById("saveCreateBtn");
+  const toolsPanel = document.getElementById("toolsPanel");
 
   if(!slot){
     console.warn("[MOUNT] No existe #jsaStickyToolsSlot todavía.");
@@ -1981,16 +1982,27 @@ if(mLatDec && mLonDec){
     console.warn("[MOUNT] No existe #saveCreateBtn.");
     return;
   }
+  if(!toolsPanel){
+    console.warn("[MOUNT] No existe #toolsPanel.");
+    return;
+  }
 
-  // Mueve el botón (append/prepend lo “arranca” de donde esté)
+  // 1) Mueve SAVE al sticky (arriba)
   slot.prepend(saveBtn);
 
-  // Estilo full width
+  // 2) Mueve toolsPanel debajo del SAVE (para que los botones queden ahí mismo)
+  slot.appendChild(toolsPanel);
+
+  // Estilos
   saveBtn.style.width = "100%";
   saveBtn.style.marginTop = "0";
 
-  console.log("[MOUNT] SAVE BUTTON moved into JSA sticky slot ✅");
+  toolsPanel.style.marginTop = "8px";
+  toolsPanel.style.display = "none"; // asegúralo oculto hasta que se guarde
+
+  console.log("[MOUNT] SAVE + TOOLS moved into JSA sticky slot ✅");
 }
+
 
 
 
